@@ -368,21 +368,21 @@ class DualModeGenericThermostat(ClimateEntity, RestoreEntity):
     def hvac_modes(self):
         """List of available operation modes."""
         state = self.hass.states.get(self.climate_entity_id)
-        if state:
+        if state and ATTR_HVAC_MODES in state.attributes:
             return [HVAC_MODE_HEAT_COOL] + state.attributes[ATTR_HVAC_MODES]
 
     @property
     def preset_mode(self):
         """Return the current preset mode, e.g., home, away, temp."""
         state = self.hass.states.get(self.climate_entity_id)
-        if state:
+        if state and ATTR_PRESET_MODE in state.attributes:
             return state.attributes[ATTR_PRESET_MODE]
 
     @property
     def preset_modes(self):
         """Return a list of available preset modes."""
         state = self.hass.states.get(self.climate_entity_id)
-        if state:
+        if state and ATTR_PRESET_MODES in state.attributes:
             return state.attributes[ATTR_PRESET_MODES]
 
     @property
@@ -392,7 +392,7 @@ class DualModeGenericThermostat(ClimateEntity, RestoreEntity):
         Requires ClimateEntityFeature.FAN_MODE.
         """
         state = self.hass.states.get(self.climate_entity_id)
-        if state:
+        if state and ATTR_FAN_MODE in state.attributes:
             return state.attributes[ATTR_FAN_MODE]
 
     @property
@@ -402,7 +402,7 @@ class DualModeGenericThermostat(ClimateEntity, RestoreEntity):
         Requires ClimateEntityFeature.FAN_MODE.
         """
         state = self.hass.states.get(self.climate_entity_id)
-        if state:
+        if state and ATTR_FAN_MODES in state.attributes:
             return state.attributes[ATTR_FAN_MODES]
 
     @property
@@ -412,7 +412,7 @@ class DualModeGenericThermostat(ClimateEntity, RestoreEntity):
         Requires ClimateEntityFeature.SWING_MODE.
         """
         state = self.hass.states.get(self.climate_entity_id)
-        if state:
+        if state and ATTR_SWING_MODE in state.attributes:
             return state.attributes[ATTR_SWING_MODE]
 
     @property
@@ -422,7 +422,7 @@ class DualModeGenericThermostat(ClimateEntity, RestoreEntity):
         Requires ClimateEntityFeature.SWING_MODE.
         """
         state = self.hass.states.get(self.climate_entity_id)
-        if state:
+        if state and ATTR_SWING_MODES in state.attributes:
             return state.attributes[ATTR_SWING_MODES]
 
     async def async_set_hvac_mode(self, hvac_mode):
