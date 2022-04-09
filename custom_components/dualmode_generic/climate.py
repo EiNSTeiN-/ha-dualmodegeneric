@@ -88,7 +88,7 @@ CONF_MIN_DUR = "min_cycle_duration"
 CONF_COLD_TOLERANCE = "cold_tolerance"
 CONF_HOT_TOLERANCE = "hot_tolerance"
 CONF_INITIAL_HVAC_MODE = "initial_hvac_mode"
-SUPPORT_FLAGS = SUPPORT_TARGET_TEMPERATURE | SUPPORT_SWING_MODE | SUPPORT_FAN_MODE | SUPPORT_PRESET_MODE
+SUPPORT_FLAGS = SUPPORT_TARGET_TEMPERATURE | SUPPORT_SWING_MODE | SUPPORT_FAN_MODE | SUPPORT_PRESET_MODE | SUPPORT_TARGET_TEMPERATURE_RANGE
 
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     {
@@ -170,7 +170,7 @@ class DualModeGenericThermostat(ClimateEntity, RestoreEntity):
         self._hot_tolerance = hot_tolerance
         self._hvac_mode = initial_hvac_mode
 
-        self._support_flags = SUPPORT_FLAGS | SUPPORT_TARGET_TEMPERATURE_RANGE
+        self._support_flags = SUPPORT_FLAGS
 
         self._active = False
         self._cur_temp = None
