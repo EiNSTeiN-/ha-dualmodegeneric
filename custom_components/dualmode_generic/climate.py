@@ -30,6 +30,8 @@ from homeassistant.components.climate.const import (
     ATTR_FAN_MODES,
     ATTR_SWING_MODE,
     ATTR_SWING_MODES,
+    ATTR_MIN_TEMP,
+    ATTR_MAX_TEMP,
     CURRENT_HVAC_COOL,
     CURRENT_HVAC_HEAT,
     CURRENT_HVAC_FAN,
@@ -79,8 +81,6 @@ DEFAULT_TOLERANCE = 0.3
 DEFAULT_NAME = "Generic Thermostat"
 
 CONF_CLIMATE_ENTITY_ID = "climate_entity_id"
-CONF_MIN_TEMP = "min_temp"
-CONF_MAX_TEMP = "max_temp"
 CONF_TARGET_TEMP_HIGH = "target_temp_high"
 CONF_TARGET_TEMP_LOW = "target_temp_low"
 CONF_TARGET_TEMP = "target_temp"
@@ -93,9 +93,7 @@ SUPPORT_FLAGS = SUPPORT_TARGET_TEMPERATURE | SUPPORT_SWING_MODE | SUPPORT_FAN_MO
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     {
         vol.Optional(CONF_CLIMATE_ENTITY_ID): cv.entity_id,
-        vol.Optional(CONF_MAX_TEMP): vol.Coerce(float),
         vol.Optional(CONF_MIN_DUR): vol.All(cv.time_period, cv.positive_timedelta),
-        vol.Optional(CONF_MIN_TEMP): vol.Coerce(float),
         vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,
         vol.Optional(CONF_COLD_TOLERANCE, default=DEFAULT_TOLERANCE): vol.Coerce(float),
         vol.Optional(CONF_HOT_TOLERANCE, default=DEFAULT_TOLERANCE): vol.Coerce(float),
@@ -117,8 +115,6 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
 
     name = config.get(CONF_NAME)
     climate_entity_id = config.get(CONF_CLIMATE_ENTITY_ID)
-    min_temp = config.get(CONF_MIN_TEMP)
-    max_temp = config.get(CONF_MAX_TEMP)
     target_temp = config.get(CONF_TARGET_TEMP)
     target_temp_high = config.get(CONF_TARGET_TEMP_HIGH)
     target_temp_low = config.get(CONF_TARGET_TEMP_LOW)
@@ -134,8 +130,6 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
             DualModeGenericThermostat(
                 name,
                 climate_entity_id,
-                min_temp,
-                max_temp,
                 target_temp,
                 target_temp_high,
                 target_temp_low,
@@ -157,8 +151,6 @@ class DualModeGenericThermostat(ClimateEntity, RestoreEntity):
             self,
             name,
             climate_entity_id,
-            min_temp,
-            max_temp,
             target_temp,
             target_temp_high,
             target_temp_low,
@@ -183,8 +175,6 @@ class DualModeGenericThermostat(ClimateEntity, RestoreEntity):
         self._active = False
         self._cur_temp = None
         self._temp_lock = asyncio.Lock()
-        self._min_temp = min_temp
-        self._max_temp = max_temp
         self._target_temp_high = target_temp_high
         self._target_temp_low = target_temp_low
         self._target_temp = target_temp
@@ -228,7 +218,7 @@ class DualModeGenericThermostat(ClimateEntity, RestoreEntity):
                     elif self._hvac_mode == HVAC_MODE_HEAT:
                         self._target_temp = self.min_temp
                     elif self._hvac_mode == HVAC_MODE_DRY:
-                        self._target_temp = self._min_temp
+                        self._target_temp = self.min_temp
                     elif self._hvac_mode == HVAC_MODE_HEAT_COOL:
                         self._target_temp_high = self.max_temp
                         self._target_temp_low = self.min_temp
@@ -317,9 +307,9 @@ class DualModeGenericThermostat(ClimateEntity, RestoreEntity):
     def temperature_unit(self):
         """Return the unit of measurement."""
         state = self.hass.states.get(self.climate_entity_id)
-        if not state:
-            return TEMP_CELSIUS
-        return state.attributes[ATTR_UNIT_OF_MEASUREMENT] or TEMP_CELSIUS
+        if not state or ATTR_UNIT_OF_MEASUREMENT not in state.attributes:
+            return super().temperature_unit
+        return state.attributes[ATTR_UNIT_OF_MEASUREMENT]
 
     @property
     def current_temperature(self):
@@ -461,17 +451,19 @@ class DualModeGenericThermostat(ClimateEntity, RestoreEntity):
     @property
     def min_temp(self):
         """Return the minimum temperature."""
-        if self._min_temp is not None:
-            return self._min_temp
+        state = self.hass.states.get(self.climate_entity_id)
+        if state and (value := state.attributes[ATTR_MIN_TEMP]) is not None:
+            return value
 
-        # get default temp from super class
+        # Get default temp from super class
         return super().min_temp
 
     @property
     def max_temp(self):
         """Return the maximum temperature."""
-        if self._max_temp is not None:
-            return self._max_temp
+        state = self.hass.states.get(self.climate_entity_id)
+        if state and (value := state.attributes[ATTR_MAX_TEMP]) is not None:
+            return value
 
         # Get default temp from super class
         return super().max_temp
