@@ -317,8 +317,9 @@ class DualModeGenericThermostat(ClimateEntity, RestoreEntity):
     def temperature_unit(self):
         """Return the unit of measurement."""
         state = self.hass.states.get(self.climate_entity_id)
-        if state:
-            return state.attributes[ATTR_UNIT_OF_MEASUREMENT] or TEMP_CELSIUS
+        if not state:
+            return TEMP_CELSIUS
+        return state.attributes[ATTR_UNIT_OF_MEASUREMENT] or TEMP_CELSIUS
 
     @property
     def current_temperature(self):
