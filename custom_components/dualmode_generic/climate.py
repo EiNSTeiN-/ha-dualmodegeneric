@@ -331,18 +331,18 @@ class DualModeGenericThermostat(ClimateEntity, RestoreEntity):
         if self._hvac_mode == HVAC_MODE_OFF:
             return CURRENT_HVAC_OFF
         if self._hvac_mode == HVAC_MODE_COOL:
-            return CURRENT_HVAC_COOL if self._cur_temp > self._target_temp else CURRENT_HVAC_IDLE
+            return CURRENT_HVAC_COOL if self._cur_temp and self._target_temp and self._cur_temp > self._target_temp else CURRENT_HVAC_IDLE
         if self._hvac_mode == HVAC_MODE_HEAT:
-            return CURRENT_HVAC_HEAT if self._cur_temp < self._target_temp else CURRENT_HVAC_IDLE
+            return CURRENT_HVAC_HEAT if self._cur_temp and self._target_temp and self._cur_temp < self._target_temp else CURRENT_HVAC_IDLE
         if self._hvac_mode == HVAC_MODE_FAN_ONLY:
             return CURRENT_HVAC_FAN
         if self._hvac_mode == HVAC_MODE_DRY:
             return CURRENT_HVAC_DRY
         if self._hvac_mode == HVAC_MODE_HEAT_COOL:
             if self.hass.states.is_state(self.climate_entity_id, HVAC_MODE_HEAT):
-                return CURRENT_HVAC_HEAT if self._cur_temp < self._target_temp else CURRENT_HVAC_IDLE
+                return CURRENT_HVAC_HEAT if self._cur_temp and self._target_temp_low and self._cur_temp < self._target_temp_low else CURRENT_HVAC_IDLE
             elif self.hass.states.is_state(self.climate_entity_id, HVAC_MODE_COOL):
-                return CURRENT_HVAC_COOL if self._cur_temp > self._target_temp else CURRENT_HVAC_IDLE
+                return CURRENT_HVAC_COOL if self._cur_temp and self._target_temp_high and self._cur_temp > self._target_temp_high else CURRENT_HVAC_IDLE
             else:
                 _LOGGER.info("Climate entity returned unexpected state (neither cooling nor heating)")
                 return CURRENT_HVAC_IDLE
