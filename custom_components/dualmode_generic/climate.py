@@ -515,16 +515,16 @@ class DualModeGenericThermostat(ClimateEntity, RestoreEntity):
         """Update thermostat with latest state from climate entity."""
         try:
             if state == HVAC_MODE_HEAT:
-                if self._hvac_mode == HVAC_MODE_HEAT_COOL and self._target_temp_high != float(temp):
-                    _LOGGER.info("New target_temp_high %s changed from %s", temp, self._target_temp_high)
-                    self._target_temp_high = float(temp)
-                elif self._hvac_mode == HVAC_MODE_HEAT and self._target_temp != float(temp):
-                    _LOGGER.info("New target_temp for heat %s changed from %s", temp, self._target_temp_high)
-                    self._target_temp = float(temp)
-            elif state == HVAC_MODE_COOL:
                 if self._hvac_mode == HVAC_MODE_HEAT_COOL and self._target_temp_low != float(temp):
                     _LOGGER.info("New target_temp_low %s changed from %s", temp, self._target_temp_low)
                     self._target_temp_low = float(temp)
+                elif self._hvac_mode == HVAC_MODE_HEAT and self._target_temp != float(temp):
+                    _LOGGER.info("New target_temp for heat %s changed from %s", temp, self._target_temp)
+                    self._target_temp = float(temp)
+            elif state == HVAC_MODE_COOL:
+                if self._hvac_mode == HVAC_MODE_HEAT_COOL and self._target_temp_high != float(temp):
+                    _LOGGER.info("New target_temp_high %s changed from %s", temp, self._target_temp_low)
+                    self._target_temp_high = float(temp)
                 elif self._hvac_mode == HVAC_MODE_COOL and self._target_temp != float(temp):
                     _LOGGER.info("New target_temp for cool %s changed from %s", temp, self._target_temp)
                     self._target_temp = float(temp)
