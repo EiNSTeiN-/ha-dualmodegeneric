@@ -267,8 +267,11 @@ class DualModeGenericThermostat(ClimateEntity, RestoreEntity):
             """Init on startup."""
             state = self.hass.states.get(self.climate_entity_id)
             if state:
+                _LOGGER.info("Updating internal state from climate entity on startup")
                 self._state_changed(state)
                 self.async_write_ha_state()
+            else:
+                _LOGGER.info("Failed to update internal state from climate entity on startup because entity is not available")
 
         if self.hass.state == CoreState.running:
             _async_startup()
@@ -471,6 +474,7 @@ class DualModeGenericThermostat(ClimateEntity, RestoreEntity):
 
     async def _async_climate_state_changed(self, entity_id, old_state, new_state):
         """Handle temperature changes."""
+        _LOGGER.info("Received state change callback from climate entity")
         self._state_changed(new_state)
         await self._async_control_heating()
         self.async_write_ha_state()
@@ -479,10 +483,10 @@ class DualModeGenericThermostat(ClimateEntity, RestoreEntity):
         if new_state is None or new_state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
             return
 
-        if (temp := new_state.attributes[ATTR_CURRENT_TEMPERATURE]):
+        if ATTR_CURRENT_TEMPERATURE in new_state.attributes and (temp := new_state.attributes[ATTR_CURRENT_TEMPERATURE]) is not None:
             self._async_update_temp(temp)
 
-        if (temp := new_state.attributes[ATTR_TEMPERATURE]):
+        if ATTR_TEMPERATURE in new_state.attributes and (temp := new_state.attributes[ATTR_TEMPERATURE]) is not None:
             self._async_update_target_temp(new_state.state, temp)
 
         if self._hvac_mode == HVAC_MODE_HEAT_COOL:
