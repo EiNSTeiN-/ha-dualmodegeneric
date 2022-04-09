@@ -192,18 +192,6 @@ class DualModeGenericThermostat(ClimateEntity, RestoreEntity):
             )
         )
 
-        @callback
-        def _async_startup(event=None):
-            """Init on startup."""
-            state = self.hass.states.get(self.climate_entity_id)
-            if state:
-                self._state_changed(state)
-
-        if self.hass.state == CoreState.running:
-            _async_startup()
-        else:
-            self.hass.bus.async_listen_once(EVENT_HOMEASSISTANT_START, _async_startup)
-
         # Check If we have an old state
         old_state = await self.async_get_last_state()
         if old_state is not None:
@@ -273,6 +261,19 @@ class DualModeGenericThermostat(ClimateEntity, RestoreEntity):
         # Set default state to off
         if not self._hvac_mode:
             self._hvac_mode = HVAC_MODE_OFF
+
+        @callback
+        def _async_startup(event=None):
+            """Init on startup."""
+            state = self.hass.states.get(self.climate_entity_id)
+            if state:
+                self._state_changed(state)
+                self.async_write_ha_state()
+
+        if self.hass.state == CoreState.running:
+            _async_startup()
+        else:
+            self.hass.bus.async_listen_once(EVENT_HOMEASSISTANT_START, _async_startup)
 
     @property
     def should_poll(self):
