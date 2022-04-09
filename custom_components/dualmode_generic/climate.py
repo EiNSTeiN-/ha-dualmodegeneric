@@ -473,7 +473,7 @@ class DualModeGenericThermostat(ClimateEntity, RestoreEntity):
     async def _async_climate_state_changed(self, entity_id, old_state, new_state):
         """Handle temperature changes."""
         _LOGGER.info("Received state change callback from climate entity")
-        self._state_changed(new_state)
+        await self._state_changed(new_state)
         await self._async_control_heating()
         self.async_write_ha_state()
 
@@ -483,11 +483,13 @@ class DualModeGenericThermostat(ClimateEntity, RestoreEntity):
             return
 
         if ATTR_CURRENT_TEMPERATURE in new_state.attributes and (temp := new_state.attributes[ATTR_CURRENT_TEMPERATURE]) is not None:
+            _LOGGER.debug("New current temperature from entity: %s", temp)
             self._async_update_temp(temp)
         else:
             _LOGGER.debug("Current temperature is not present in climate entity state")
 
         if ATTR_TEMPERATURE in new_state.attributes and (temp := new_state.attributes[ATTR_TEMPERATURE]) is not None:
+            _LOGGER.debug("New target temperature from entity: %s for %s mode", temp, new_state.state)
             self._async_update_target_temp(new_state.state, temp)
         else:
             _LOGGER.debug("Current temperature is not present in climate entity state")
