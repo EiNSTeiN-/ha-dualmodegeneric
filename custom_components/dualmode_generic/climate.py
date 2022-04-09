@@ -205,7 +205,8 @@ class DualModeGenericThermostat(ClimateEntity, RestoreEntity):
         def _async_startup(event=None):
             """Init on startup."""
             state = self.hass.states.get(self.climate_entity_id)
-            self._state_changed(state)
+            if state:
+                self._state_changed(state)
 
         if self.hass.state == CoreState.running:
             _async_startup()
@@ -301,7 +302,8 @@ class DualModeGenericThermostat(ClimateEntity, RestoreEntity):
     def precision(self):
         """Return the precision of the system."""
         state = self.hass.states.get(self.climate_entity_id)
-        return state.attributes[ATTR_TARGET_TEMP_STEP]
+        if state:
+            return state.attributes[ATTR_TARGET_TEMP_STEP]
     
     @property
     def target_temperature_step(self):
@@ -314,7 +316,8 @@ class DualModeGenericThermostat(ClimateEntity, RestoreEntity):
     def temperature_unit(self):
         """Return the unit of measurement."""
         state = self.hass.states.get(self.climate_entity_id)
-        return state.attributes[ATTR_UNIT_OF_MEASUREMENT]
+        if state:
+            return state.attributes[ATTR_UNIT_OF_MEASUREMENT]
 
     @property
     def current_temperature(self):
@@ -371,19 +374,22 @@ class DualModeGenericThermostat(ClimateEntity, RestoreEntity):
     def hvac_modes(self):
         """List of available operation modes."""
         state = self.hass.states.get(self.climate_entity_id)
-        return [HVAC_MODE_HEAT_COOL] + state.attributes[ATTR_HVAC_MODES]
+        if state:
+            return [HVAC_MODE_HEAT_COOL] + state.attributes[ATTR_HVAC_MODES]
 
     @property
     def preset_mode(self):
         """Return the current preset mode, e.g., home, away, temp."""
         state = self.hass.states.get(self.climate_entity_id)
-        return state.attributes[ATTR_PRESET_MODE]
+        if state:
+            return state.attributes[ATTR_PRESET_MODE]
 
     @property
     def preset_modes(self):
         """Return a list of available preset modes."""
         state = self.hass.states.get(self.climate_entity_id)
-        return state.attributes[ATTR_PRESET_MODES]
+        if state:
+            return state.attributes[ATTR_PRESET_MODES]
 
     @property
     def fan_mode(self):
@@ -392,7 +398,8 @@ class DualModeGenericThermostat(ClimateEntity, RestoreEntity):
         Requires ClimateEntityFeature.FAN_MODE.
         """
         state = self.hass.states.get(self.climate_entity_id)
-        return state.attributes[ATTR_FAN_MODE]
+        if state:
+            return state.attributes[ATTR_FAN_MODE]
 
     @property
     def fan_modes(self):
@@ -401,7 +408,8 @@ class DualModeGenericThermostat(ClimateEntity, RestoreEntity):
         Requires ClimateEntityFeature.FAN_MODE.
         """
         state = self.hass.states.get(self.climate_entity_id)
-        return state.attributes[ATTR_FAN_MODES]
+        if state:
+            return state.attributes[ATTR_FAN_MODES]
 
     @property
     def swing_mode(self):
@@ -410,7 +418,8 @@ class DualModeGenericThermostat(ClimateEntity, RestoreEntity):
         Requires ClimateEntityFeature.SWING_MODE.
         """
         state = self.hass.states.get(self.climate_entity_id)
-        return state.attributes[ATTR_SWING_MODE]
+        if state:
+            return state.attributes[ATTR_SWING_MODE]
 
     @property
     def swing_modes(self):
@@ -419,7 +428,8 @@ class DualModeGenericThermostat(ClimateEntity, RestoreEntity):
         Requires ClimateEntityFeature.SWING_MODE.
         """
         state = self.hass.states.get(self.climate_entity_id)
-        return state.attributes[ATTR_SWING_MODES]
+        if state:
+            return state.attributes[ATTR_SWING_MODES]
 
     async def async_set_hvac_mode(self, hvac_mode):
         """Set hvac mode."""
@@ -521,7 +531,8 @@ class DualModeGenericThermostat(ClimateEntity, RestoreEntity):
     def _climate_entity_hvac_mode(self):
         """List of available operation modes."""
         state = self.hass.states.get(self.climate_entity_id)
-        return state.state
+        if state:
+            return state.state
 
     async def _async_control_heating(self, time=None, force=False):
         """Check if we need to turn heating on or off."""
