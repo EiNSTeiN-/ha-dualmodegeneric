@@ -14,6 +14,7 @@ import voluptuous as vol
 
 from homeassistant.const import (
     ATTR_UNIT_OF_MEASUREMENT,
+    TEMP_CELSIUS,
 )
 from homeassistant.components.climate import PLATFORM_SCHEMA, ClimateEntity
 from homeassistant.components.climate.const import (
@@ -317,7 +318,7 @@ class DualModeGenericThermostat(ClimateEntity, RestoreEntity):
         """Return the unit of measurement."""
         state = self.hass.states.get(self.climate_entity_id)
         if state:
-            return state.attributes[ATTR_UNIT_OF_MEASUREMENT]
+            return state.attributes[ATTR_UNIT_OF_MEASUREMENT] or TEMP_CELSIUS
 
     @property
     def current_temperature(self):
