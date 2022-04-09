@@ -1,4 +1,4 @@
-"""The dualmode_generic thermostat component."""
+"""The dualmode_ac thermostat component."""
 
-DOMAIN = "dualmode_generic"
+DOMAIN = "dualmode_ac"
 PLATFORMS = ["climate"]

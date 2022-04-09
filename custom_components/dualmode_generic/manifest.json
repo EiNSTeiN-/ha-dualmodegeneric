@@ -1,9 +1,9 @@
 {
-    "domain": "dualmode_generic",
-    "name": "Dual-Mode Generic Thermostat",
-    "documentation": "https://github.com/zacs/ha-dualmodegeneric",
+    "domain": "dualmode_ac",
+    "name": "Dual-Mode Thermostat for controlling heat pump AC entity",
+    "documentation": "https://github.com/EiNSTeiN-/ha-dualmodegeneric",
     "version": "0.2",
     "dependencies": [],
-    "codeowners": ["@zacs"],
+    "codeowners": ["@EiNSTeiN-"],
     "requirements": []
 }
