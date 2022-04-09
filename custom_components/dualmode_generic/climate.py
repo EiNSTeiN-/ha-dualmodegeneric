@@ -234,29 +234,26 @@ class DualModeGenericThermostat(ClimateEntity, RestoreEntity):
             if not self._hvac_mode and old_state.state:
                 self._hvac_mode = old_state.state
 
-        else:
-            # No previous state, try and restore defaults
-            if self._target_temp is None:
-                if self._hvac_mode == HVAC_MODE_COOL:
-                    self._target_temp = self.max_temp
-                elif self._hvac_mode == HVAC_MODE_FAN_ONLY:
-                    self._target_temp = self.max_temp
-                elif self._hvac_mode == HVAC_MODE_HEAT:
-                    self._target_temp = self.min_temp
-                elif self._hvac_mode == HVAC_MODE_DRY:
-                    self._target_temp = self.min_temp
-                elif self._hvac_mode == HVAC_MODE_HEAT_COOL:
-                    self._target_temp_high = self.max_temp
-                    self._target_temp_low = self.min_temp
-                else:
-                    self._target_temp = self.min_temp
-            if self._target_temp_low is None:
-                self._target_temp_low = self.min_temp
-            if self._target_temp_high is None:
+        # No previous state, try and restore defaults
+        if self._target_temp is None:
+            if self._hvac_mode == HVAC_MODE_COOL:
+                self._target_temp = self.max_temp
+            elif self._hvac_mode == HVAC_MODE_FAN_ONLY:
+                self._target_temp = self.max_temp
+            elif self._hvac_mode == HVAC_MODE_HEAT:
+                self._target_temp = self.min_temp
+            elif self._hvac_mode == HVAC_MODE_DRY:
+                self._target_temp = self.min_temp
+            elif self._hvac_mode == HVAC_MODE_HEAT_COOL:
                 self._target_temp_high = self.max_temp
-            _LOGGER.warning(
-                "No previously saved temperature, setting to %s", self._target_temp
-            )
+                self._target_temp_low = self.min_temp
+            else:
+                self._target_temp = self.min_temp
+            _LOGGER.warning("No previously saved temperature, setting to %s", self._target_temp)
+        if self._target_temp_low is None:
+            self._target_temp_low = self.min_temp
+        if self._target_temp_high is None:
+            self._target_temp_high = self.max_temp
 
         # Set default state to off
         if not self._hvac_mode:
@@ -342,12 +339,13 @@ class DualModeGenericThermostat(ClimateEntity, RestoreEntity):
         if self._hvac_mode == HVAC_MODE_DRY:
             return CURRENT_HVAC_DRY
         if self._hvac_mode == HVAC_MODE_HEAT_COOL:
-            if self.hass.states.is_state(self.climate_entity_id, HVAC_MODE_HEAT):
+            mode = self._climate_entity_hvac_mode()
+            if mode == HVAC_MODE_HEAT:
                 return CURRENT_HVAC_HEAT if self._cur_temp and self._target_temp_low and self._cur_temp < self._target_temp_low else CURRENT_HVAC_IDLE
-            elif self.hass.states.is_state(self.climate_entity_id, HVAC_MODE_COOL):
+            elif mode == HVAC_MODE_COOL:
                 return CURRENT_HVAC_COOL if self._cur_temp and self._target_temp_high and self._cur_temp > self._target_temp_high else CURRENT_HVAC_IDLE
             else:
-                _LOGGER.info("Climate entity returned unexpected state (neither cooling nor heating)")
+                _LOGGER.info("Climate entity returned unexpected state: %s, assuming idle", mode)
                 return CURRENT_HVAC_IDLE
         return CURRENT_HVAC_IDLE
 
@@ -481,13 +479,18 @@ class DualModeGenericThermostat(ClimateEntity, RestoreEntity):
 
     async def _state_changed(self, new_state):
         if new_state is None or new_state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
+            _LOGGER.debug("New entity state is not available")
             return
 
         if ATTR_CURRENT_TEMPERATURE in new_state.attributes and (temp := new_state.attributes[ATTR_CURRENT_TEMPERATURE]) is not None:
             self._async_update_temp(temp)
+        else:
+            _LOGGER.debug("Current temperature is not present in climate entity state")
 
         if ATTR_TEMPERATURE in new_state.attributes and (temp := new_state.attributes[ATTR_TEMPERATURE]) is not None:
             self._async_update_target_temp(new_state.state, temp)
+        else:
+            _LOGGER.debug("Current temperature is not present in climate entity state")
 
         if self._hvac_mode == HVAC_MODE_HEAT_COOL:
             if new_state.state not in [HVAC_MODE_HEAT, HVAC_MODE_COOL]:
