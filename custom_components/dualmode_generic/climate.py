@@ -115,7 +115,7 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
     await async_setup_reload_service(hass, DOMAIN, PLATFORMS)
 
     name = config.get(CONF_NAME)
-    climate_entity_id = config.get(climate_entity_id)
+    climate_entity_id = config.get(CONF_CLIMATE_ENTITY_ID)
     min_temp = config.get(CONF_MIN_TEMP)
     max_temp = config.get(CONF_MAX_TEMP)
     target_temp = config.get(CONF_TARGET_TEMP)
