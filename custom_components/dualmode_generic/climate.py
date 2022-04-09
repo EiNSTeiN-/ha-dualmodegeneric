@@ -386,7 +386,7 @@ class DualModeGenericThermostat(ClimateEntity, RestoreEntity):
         return state.attributes[ATTR_PRESET_MODES]
 
     @property
-    def fan_mode(self) -> str | None:
+    def fan_mode(self):
         """Return the fan setting.
 
         Requires ClimateEntityFeature.FAN_MODE.
@@ -395,7 +395,7 @@ class DualModeGenericThermostat(ClimateEntity, RestoreEntity):
         return state.attributes[ATTR_FAN_MODE]
 
     @property
-    def fan_modes(self) -> list[str] | None:
+    def fan_modes(self):
         """Return the list of available fan modes.
 
         Requires ClimateEntityFeature.FAN_MODE.
@@ -404,7 +404,7 @@ class DualModeGenericThermostat(ClimateEntity, RestoreEntity):
         return state.attributes[ATTR_FAN_MODES]
 
     @property
-    def swing_mode(self) -> str | None:
+    def swing_mode(self):
         """Return the swing setting.
 
         Requires ClimateEntityFeature.SWING_MODE.
@@ -413,7 +413,7 @@ class DualModeGenericThermostat(ClimateEntity, RestoreEntity):
         return state.attributes[ATTR_SWING_MODE]
 
     @property
-    def swing_modes(self) -> list[str] | None:
+    def swing_modes(self):
         """Return the list of available swing modes.
 
         Requires ClimateEntityFeature.SWING_MODE.
