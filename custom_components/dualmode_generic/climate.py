@@ -445,15 +445,15 @@ class DualModeGenericThermostat(ClimateEntity, RestoreEntity):
         if temperature is not None:
             self._target_temp = temperature
             if self._climate_entity_hvac_mode() in (HVAC_MODE_HEAT, HVAC_MODE_COOL):
-                self._async_internal_set_temperature(temperature)
+                await self._async_internal_set_temperature(temperature)
         if temp_low is not None:
             self._target_temp_low = temp_low
             if self._climate_entity_hvac_mode() == HVAC_MODE_HEAT:
-                self._async_internal_set_temperature(temp_low)
+                await self._async_internal_set_temperature(temp_low)
         if temp_high is not None:
             self._target_temp_high = temp_high
             if self._climate_entity_hvac_mode() == HVAC_MODE_COOL:
-                self._async_internal_set_temperature(temp_high)
+                await self._async_internal_set_temperature(temp_high)
         await self._async_control_heating(force=True)
         self.async_write_ha_state()
 
@@ -580,11 +580,11 @@ class DualModeGenericThermostat(ClimateEntity, RestoreEntity):
                 if self._is_too_hot():
                     _LOGGER.info("Turning on cooling mode")
                     await self._async_internal_set_hvac_mode(HVAC_MODE_COOL)
-                    self._async_internal_set_temperature(self._target_temp_high)
+                    await self._async_internal_set_temperature(self._target_temp_high)
                 elif self._is_too_cold():
                     _LOGGER.info("Turning on heating mode")
                     await self._async_internal_set_hvac_mode(HVAC_MODE_HEAT)
-                    self._async_internal_set_temperature(self._target_temp_low)
+                    await self._async_internal_set_temperature(self._target_temp_low)
 
     @property
     def supported_features(self):
