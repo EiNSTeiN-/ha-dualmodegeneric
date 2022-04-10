@@ -48,6 +48,7 @@ from homeassistant.components.climate.const import (
     SERVICE_SET_PRESET_MODE,
     SERVICE_SET_FAN_MODE,
     SERVICE_SET_SWING_MODE,
+    SERVICE_SET_TEMPERATURE,
     SUPPORT_PRESET_MODE,
     SUPPORT_TARGET_TEMPERATURE,
     SUPPORT_TARGET_TEMPERATURE_RANGE,
@@ -443,10 +444,16 @@ class DualModeGenericThermostat(ClimateEntity, RestoreEntity):
         temp_high = kwargs.get(ATTR_TARGET_TEMP_HIGH)
         if temperature is not None:
             self._target_temp = temperature
+            if self._climate_entity_hvac_mode() in (HVAC_MODE_HEAT, HVAC_MODE_COOL):
+                self._async_internal_set_temperature(temperature)
         if temp_low is not None:
             self._target_temp_low = temp_low
+            if self._climate_entity_hvac_mode() == HVAC_MODE_HEAT:
+                self._async_internal_set_temperature(temp_low)
         if temp_high is not None:
             self._target_temp_high = temp_high
+            if self._climate_entity_hvac_mode() == HVAC_MODE_COOL:
+                self._async_internal_set_temperature(temp_high)
         await self._async_control_heating(force=True)
         self.async_write_ha_state()
 
@@ -573,9 +580,11 @@ class DualModeGenericThermostat(ClimateEntity, RestoreEntity):
                 if self._is_too_hot():
                     _LOGGER.info("Turning on cooling mode")
                     await self._async_internal_set_hvac_mode(HVAC_MODE_COOL)
+                    self._async_internal_set_temperature(self._target_temp_high)
                 elif self._is_too_cold():
                     _LOGGER.info("Turning on heating mode")
                     await self._async_internal_set_hvac_mode(HVAC_MODE_HEAT)
+                    self._async_internal_set_temperature(self._target_temp_low)
 
     @property
     def supported_features(self):
@@ -609,6 +618,13 @@ class DualModeGenericThermostat(ClimateEntity, RestoreEntity):
             await self.hass.services.async_call(HA_DOMAIN, SERVICE_SET_HVAC_MODE, data)
 
             self.async_write_ha_state()
+
+    async def _async_internal_set_temperature(self, temperature: float):
+        """Set new hvac mode."""
+        data = {ATTR_ENTITY_ID: self.climate_entity_id, ATTR_TEMPERATURE: temperature}
+        await self.hass.services.async_call(HA_DOMAIN, SERVICE_SET_TEMPERATURE, data)
+
+        self.async_write_ha_state()
 
     async def async_set_preset_mode(self, preset_mode: str):
         """Set new preset mode."""
