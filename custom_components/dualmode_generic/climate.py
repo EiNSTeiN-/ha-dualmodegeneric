@@ -304,7 +304,7 @@ class DualModeGenericThermostat(ClimateEntity, RestoreEntity):
         """Return the temperature we try to reach."""
         if self._hvac_mode == HVAC_MODE_HEAT:
             return self._target_temp_low
-        if self._hvac_mode == HVAC_MODE_HEAT:
+        if self._hvac_mode == HVAC_MODE_COOL:
             return self._target_temp_high
         return None
 
