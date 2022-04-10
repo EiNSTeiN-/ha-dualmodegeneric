@@ -54,6 +54,7 @@ from homeassistant.components.climate.const import (
     SUPPORT_TARGET_TEMPERATURE_RANGE,
     SUPPORT_SWING_MODE,
     SUPPORT_FAN_MODE,
+    DOMAIN as CLIMATE_DOMAIN,
 )
 from homeassistant.const import (
     ATTR_ENTITY_ID,
@@ -64,7 +65,7 @@ from homeassistant.const import (
     STATE_UNKNOWN,
     STATE_UNAVAILABLE,
 )
-from homeassistant.core import DOMAIN as HA_DOMAIN, CoreState, callback
+from homeassistant.core import CoreState, callback
 from homeassistant.helpers import condition
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.event import (
@@ -615,34 +616,34 @@ class DualModeGenericThermostat(ClimateEntity, RestoreEntity):
         """Set new hvac mode."""
         if hvac_mode in self.hvac_modes:
             data = {ATTR_ENTITY_ID: self.climate_entity_id, ATTR_HVAC_MODE: hvac_mode}
-            await self.hass.services.async_call(HA_DOMAIN, SERVICE_SET_HVAC_MODE, data)
+            await self.hass.services.async_call(CLIMATE_DOMAIN, SERVICE_SET_HVAC_MODE, data)
 
             self.async_write_ha_state()
 
     async def _async_internal_set_temperature(self, temperature: float):
         """Set new hvac mode."""
         data = {ATTR_ENTITY_ID: self.climate_entity_id, ATTR_TEMPERATURE: temperature}
-        await self.hass.services.async_call(HA_DOMAIN, SERVICE_SET_TEMPERATURE, data)
+        await self.hass.services.async_call(CLIMATE_DOMAIN, SERVICE_SET_TEMPERATURE, data)
 
         self.async_write_ha_state()
 
     async def async_set_preset_mode(self, preset_mode: str):
         """Set new preset mode."""
         data = {ATTR_ENTITY_ID: self.climate_entity_id, ATTR_PRESET_MODE: preset_mode}
-        await self.hass.services.async_call(HA_DOMAIN, SERVICE_SET_PRESET_MODE, data)
+        await self.hass.services.async_call(CLIMATE_DOMAIN, SERVICE_SET_PRESET_MODE, data)
 
         self.async_write_ha_state()
 
     async def async_set_fan_mode(self, fan_mode: str):
         """Set new preset mode."""
         data = {ATTR_ENTITY_ID: self.climate_entity_id, ATTR_FAN_MODE: fan_mode}
-        await self.hass.services.async_call(HA_DOMAIN, SERVICE_SET_FAN_MODE, data)
+        await self.hass.services.async_call(CLIMATE_DOMAIN, SERVICE_SET_FAN_MODE, data)
 
         self.async_write_ha_state()
 
     async def async_set_swing_mode(self, swing_mode: str):
         """Set new preset mode."""
         data = {ATTR_ENTITY_ID: self.climate_entity_id, ATTR_SWING_MODE: swing_mode}
-        await self.hass.services.async_call(HA_DOMAIN, SERVICE_SET_SWING_MODE, data)
+        await self.hass.services.async_call(CLIMATE_DOMAIN, SERVICE_SET_SWING_MODE, data)
 
         self.async_write_ha_state()
