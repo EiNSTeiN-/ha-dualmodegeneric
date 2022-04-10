@@ -358,17 +358,23 @@ class DualModeGenericThermostat(ClimateEntity, RestoreEntity):
     @property
     def target_temperature(self):
         """Return the temperature we try to reach."""
-        return self._target_temp
+        if self._hvac_mode in (HVAC_MODE_HEAT, HVAC_MODE_COOL):
+            return self._target_temp
+        return None
 
     @property
     def target_temperature_high(self):
         """Return the upper temperature we try to reach when in range mode."""
-        return self._target_temp_high
+        if self._hvac_mode == HVAC_MODE_HEAT_COOL:
+            return self._target_temp_high
+        return None
 
     @property
     def target_temperature_low(self):
         """Return the lower temperature we try to reach when in range mode."""
-        return self._target_temp_low
+        if self._hvac_mode == HVAC_MODE_HEAT_COOL:
+            return self._target_temp_low
+        return None
 
     @property
     def hvac_modes(self):
