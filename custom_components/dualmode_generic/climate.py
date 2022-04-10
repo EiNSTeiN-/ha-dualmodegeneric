@@ -165,7 +165,8 @@ class DualModeGenericThermostat(ClimateEntity, RestoreEntity):
         self.min_cycle_duration = min_cycle_duration
         self._cold_tolerance = cold_tolerance
         self._hot_tolerance = hot_tolerance
-        self._hvac_mode = initial_hvac_mode
+        self._hvac_mode = None
+        self._initial_hvac_mode = initial_hvac_mode
 
         self._support_flags = SUPPORT_FLAGS
 
@@ -205,8 +206,8 @@ class DualModeGenericThermostat(ClimateEntity, RestoreEntity):
         if self._target_temp_high is None:
             self._target_temp_high = self.max_temp
         if not self._hvac_mode:
-            # Set default state to off
-            self._hvac_mode = HVAC_MODE_OFF
+            # Set default state to _initial_hvac_mode, or Off if not specified
+            self._hvac_mode = self._initial_hvac_mode or HVAC_MODE_OFF
 
         @callback
         def _async_startup(event=None):
