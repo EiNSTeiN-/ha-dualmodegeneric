@@ -99,7 +99,6 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
         vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,
         vol.Optional(CONF_COLD_TOLERANCE, default=DEFAULT_TOLERANCE): vol.Coerce(float),
         vol.Optional(CONF_HOT_TOLERANCE, default=DEFAULT_TOLERANCE): vol.Coerce(float),
-        vol.Optional(CONF_TARGET_TEMP): vol.Coerce(float),
         vol.Optional(CONF_TARGET_TEMP_HIGH): vol.Coerce(float),
         vol.Optional(CONF_TARGET_TEMP_LOW): vol.Coerce(float),
         vol.Optional(CONF_INITIAL_HVAC_MODE): vol.In(
@@ -117,7 +116,6 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
 
     name = config.get(CONF_NAME)
     climate_entity_id = config.get(CONF_CLIMATE_ENTITY_ID)
-    target_temp = config.get(CONF_TARGET_TEMP)
     target_temp_high = config.get(CONF_TARGET_TEMP_HIGH)
     target_temp_low = config.get(CONF_TARGET_TEMP_LOW)
     min_cycle_duration = config.get(CONF_MIN_DUR)
@@ -132,7 +130,6 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
             DualModeGenericThermostat(
                 name,
                 climate_entity_id,
-                target_temp,
                 target_temp_high,
                 target_temp_low,
                 min_cycle_duration,
@@ -153,7 +150,6 @@ class DualModeGenericThermostat(ClimateEntity, RestoreEntity):
             self,
             name,
             climate_entity_id,
-            target_temp,
             target_temp_high,
             target_temp_low,
             min_cycle_duration,
@@ -179,7 +175,6 @@ class DualModeGenericThermostat(ClimateEntity, RestoreEntity):
         self._temp_lock = asyncio.Lock()
         self._target_temp_high = target_temp_high
         self._target_temp_low = target_temp_low
-        self._target_temp = target_temp
         self._unit = unit
         self._unique_id = unique_id
 
@@ -197,72 +192,21 @@ class DualModeGenericThermostat(ClimateEntity, RestoreEntity):
         # Check If we have an old state
         old_state = await self.async_get_last_state()
         if old_state is not None:
-            # If we have no initial temperature, restore
-            if self._target_temp is None:
-                # If we have a previously saved temperature
-                if old_state.attributes.get(ATTR_TEMPERATURE) is None:
-                    if self._hvac_mode == HVAC_MODE_COOL:
-                        self._target_temp = self.max_temp
-                    elif self._hvac_mode == HVAC_MODE_FAN_ONLY:
-                        self._target_temp = self.max_temp
-                    elif self._hvac_mode == HVAC_MODE_HEAT:
-                        self._target_temp = self.min_temp
-                    elif self._hvac_mode == HVAC_MODE_DRY:
-                        self._target_temp = self.min_temp
-                    elif self._hvac_mode == HVAC_MODE_HEAT_COOL:
-                        self._target_temp_high = self.max_temp
-                        self._target_temp_low = self.min_temp
-                        self._target_temp = self.min_temp
-                    else:
-                        self._target_temp = self.min_temp
-
-                    if self._target_temp_high is None:
-                        self._target_temp_high = self.max_temp
-                    if self._target_temp_low is None:
-                        self._target_temp_low = self.min_temp
-                    _LOGGER.warning(
-                        "Undefined target temperature," "falling back to %s",
-                        self._target_temp,
-                    )
-                else:
-                    self._target_temp = float(old_state.attributes[ATTR_TEMPERATURE])
             if self._target_temp_low is None:
-                if old_state.attributes.get(ATTR_TARGET_TEMP_LOW) is None:
-                    self._target_temp_low = self.min_temp
-                else:
+                if old_state.attributes.get(ATTR_TARGET_TEMP_LOW) is not None:
                     self._target_temp_low = float(old_state.attributes[ATTR_TARGET_TEMP_LOW])
             if self._target_temp_high is None:
-                if old_state.attributes.get(ATTR_TARGET_TEMP_HIGH) is None:
-                    self._target_temp_high = self.max_temp
-                else:
+                if old_state.attributes.get(ATTR_TARGET_TEMP_HIGH) is not None:
                     self._target_temp_high = float(old_state.attributes[ATTR_TARGET_TEMP_HIGH])
             if not self._hvac_mode and old_state.state:
                 self._hvac_mode = old_state.state
 
-        # No previous state, try and restore defaults
-        if self._target_temp is None:
-            if self._hvac_mode == HVAC_MODE_COOL:
-                self._target_temp = self.max_temp
-            elif self._hvac_mode == HVAC_MODE_FAN_ONLY:
-                self._target_temp = self.max_temp
-            elif self._hvac_mode == HVAC_MODE_HEAT:
-                self._target_temp = self.min_temp
-            elif self._hvac_mode == HVAC_MODE_DRY:
-                self._target_temp = self.min_temp
-            elif self._hvac_mode == HVAC_MODE_HEAT_COOL:
-                self._target_temp_high = self.max_temp
-                self._target_temp_low = self.min_temp
-                self._target_temp = self.min_temp
-            else:
-                self._target_temp = self.min_temp
-            _LOGGER.warning("No previously saved temperature, setting to %s", self._target_temp)
         if self._target_temp_low is None:
             self._target_temp_low = self.min_temp
         if self._target_temp_high is None:
             self._target_temp_high = self.max_temp
-
-        # Set default state to off
         if not self._hvac_mode:
+            # Set default state to off
             self._hvac_mode = HVAC_MODE_OFF
 
         @callback
@@ -337,9 +281,9 @@ class DualModeGenericThermostat(ClimateEntity, RestoreEntity):
         if self._hvac_mode == HVAC_MODE_OFF:
             return CURRENT_HVAC_OFF
         if self._hvac_mode == HVAC_MODE_COOL:
-            return CURRENT_HVAC_COOL if self._cur_temp and self._target_temp and self._cur_temp > self._target_temp else CURRENT_HVAC_IDLE
+            return CURRENT_HVAC_COOL if self._cur_temp and self._target_temp_high and self._cur_temp > self._target_temp_high else CURRENT_HVAC_IDLE
         if self._hvac_mode == HVAC_MODE_HEAT:
-            return CURRENT_HVAC_HEAT if self._cur_temp and self._target_temp and self._cur_temp < self._target_temp else CURRENT_HVAC_IDLE
+            return CURRENT_HVAC_HEAT if self._cur_temp and self._target_temp_low and self._cur_temp < self._target_temp_low else CURRENT_HVAC_IDLE
         if self._hvac_mode == HVAC_MODE_FAN_ONLY:
             return CURRENT_HVAC_FAN
         if self._hvac_mode == HVAC_MODE_DRY:
@@ -358,8 +302,10 @@ class DualModeGenericThermostat(ClimateEntity, RestoreEntity):
     @property
     def target_temperature(self):
         """Return the temperature we try to reach."""
-        if self._hvac_mode in (HVAC_MODE_HEAT, HVAC_MODE_COOL):
-            return self._target_temp
+        if self._hvac_mode == HVAC_MODE_HEAT:
+            return self._target_temp_low
+        if self._hvac_mode == HVAC_MODE_HEAT:
+            return self._target_temp_high
         return None
 
     @property
@@ -454,7 +400,10 @@ class DualModeGenericThermostat(ClimateEntity, RestoreEntity):
         temp_low = kwargs.get(ATTR_TARGET_TEMP_LOW)
         temp_high = kwargs.get(ATTR_TARGET_TEMP_HIGH)
         if temperature is not None:
-            self._target_temp = temperature
+            if self._hvac_mode == HVAC_MODE_COOL:
+                self._target_temp_high = temperature
+            if self._hvac_mode == HVAC_MODE_HEAT:
+                self._target_temp_low = temperature
             if self._climate_entity_hvac_mode() in (HVAC_MODE_HEAT, HVAC_MODE_COOL):
                 await self._async_internal_set_temperature(temperature)
         if temp_low is not None:
@@ -521,14 +470,10 @@ class DualModeGenericThermostat(ClimateEntity, RestoreEntity):
             self._hvac_mode = new_state.state
 
         if ATTR_MIN_TEMP in new_state.attributes and (min_temp := new_state.attributes[ATTR_MIN_TEMP]) is not None:
-            if self._target_temp is None or self._target_temp < min_temp:
-                self._target_temp = min_temp
             if self._target_temp_low is None or self._target_temp_low < min_temp:
                 self._target_temp_low = min_temp
 
         if ATTR_MAX_TEMP in new_state.attributes and (max_temp := new_state.attributes[ATTR_MAX_TEMP]) is not None:
-            if self._target_temp is None or self._target_temp > max_temp:
-                self._target_temp = max_temp
             if self._target_temp_high is None or self._target_temp_high > max_temp:
                 self._target_temp_high = max_temp
 
@@ -545,19 +490,13 @@ class DualModeGenericThermostat(ClimateEntity, RestoreEntity):
         """Update thermostat with latest state from climate entity."""
         try:
             if state == HVAC_MODE_HEAT:
-                if self._hvac_mode == HVAC_MODE_HEAT_COOL and self._target_temp_low != float(temp):
+                if self._hvac_mode in (HVAC_MODE_HEAT, HVAC_MODE_HEAT_COOL) and self._target_temp_low != float(temp):
                     _LOGGER.info("New target_temp_low %s changed from %s", temp, self._target_temp_low)
                     self._target_temp_low = float(temp)
-                elif self._hvac_mode == HVAC_MODE_HEAT and self._target_temp != float(temp):
-                    _LOGGER.info("New target_temp for heat %s changed from %s", temp, self._target_temp)
-                    self._target_temp = float(temp)
             elif state == HVAC_MODE_COOL:
-                if self._hvac_mode == HVAC_MODE_HEAT_COOL and self._target_temp_high != float(temp):
+                if self._hvac_mode in (HVAC_MODE_COOL, HVAC_MODE_HEAT_COOL) and self._target_temp_high != float(temp):
                     _LOGGER.info("New target_temp_high %s changed from %s", temp, self._target_temp_low)
                     self._target_temp_high = float(temp)
-                elif self._hvac_mode == HVAC_MODE_COOL and self._target_temp != float(temp):
-                    _LOGGER.info("New target_temp for cool %s changed from %s", temp, self._target_temp)
-                    self._target_temp = float(temp)
 
         except ValueError as ex:
             _LOGGER.error("Temperature updated in : %s", ex)
@@ -571,14 +510,9 @@ class DualModeGenericThermostat(ClimateEntity, RestoreEntity):
     async def _async_control_heating(self, force=False):
         """Check if we need to turn heating on or off."""
         async with self._temp_lock:
-            if not self._active and None not in (self._cur_temp, self._target_temp):
+            if not self._active and None not in (self._cur_temp, self._target_temp_high, self._target_temp_low):
                 self._active = True
-                _LOGGER.info(
-                    "Obtained current and target temperature. "
-                    "Generic Dual-mode thermostat active. %s, %s",
-                    self._cur_temp,
-                    self._target_temp,
-                )
+                _LOGGER.info("Obtained current and target temperature. Generic Dual-mode thermostat active.")
 
             if not self._active or self._hvac_mode == HVAC_MODE_OFF:
                 return
@@ -611,8 +545,10 @@ class DualModeGenericThermostat(ClimateEntity, RestoreEntity):
             else:
                 _LOGGER.info("Turning on %s mode", self._hvac_mode)
                 await self._async_internal_set_hvac_mode(self._hvac_mode)
-                if self._hvac_mode in (HVAC_MODE_COOL, HVAC_MODE_HEAT):
-                    await self._async_internal_set_temperature(self._target_temp)
+                if self._hvac_mode == HVAC_MODE_COOL:
+                    await self._async_internal_set_temperature(self._target_temp_high)
+                if self._hvac_mode == HVAC_MODE_HEAT:
+                    await self._async_internal_set_temperature(self._target_temp_low)
 
     @property
     def supported_features(self):
