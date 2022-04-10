@@ -586,6 +586,10 @@ class DualModeGenericThermostat(ClimateEntity, RestoreEntity):
                     _LOGGER.info("Turning on heating mode")
                     await self._async_internal_set_hvac_mode(HVAC_MODE_HEAT)
                     await self._async_internal_set_temperature(self._target_temp_low)
+            else:
+                await self._async_internal_set_hvac_mode(self._hvac_mode)
+                if self._hvac_mode in (HVAC_MODE_COOL, HVAC_MODE_HEAT):
+                    await self._async_internal_set_temperature(self._target_temp)
 
     @property
     def supported_features(self):
