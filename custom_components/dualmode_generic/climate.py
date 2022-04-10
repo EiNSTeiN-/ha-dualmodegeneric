@@ -436,7 +436,7 @@ class DualModeGenericThermostat(ClimateEntity, RestoreEntity):
             _LOGGER.error("Unrecognized hvac mode: %s", hvac_mode)
             return
         # Ensure we update the current operation after changing the mode
-        await self.async_write_ha_state()
+        self.async_write_ha_state()
 
     async def async_set_temperature(self, **kwargs):
         """Set new target temperature."""
@@ -456,7 +456,7 @@ class DualModeGenericThermostat(ClimateEntity, RestoreEntity):
             if self._climate_entity_hvac_mode() == HVAC_MODE_COOL:
                 await self._async_internal_set_temperature(temp_high)
         await self._async_control_heating(force=True)
-        await self.async_write_ha_state()
+        self.async_write_ha_state()
 
     @property
     def min_temp(self):
@@ -483,7 +483,7 @@ class DualModeGenericThermostat(ClimateEntity, RestoreEntity):
         _LOGGER.info("Received state change callback from climate entity")
         await self._state_changed(new_state)
         await self._async_control_heating()
-        await self.async_write_ha_state()
+        self.async_write_ha_state()
 
     async def _state_changed(self, new_state):
         if new_state is None or new_state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
@@ -587,6 +587,7 @@ class DualModeGenericThermostat(ClimateEntity, RestoreEntity):
                     await self._async_internal_set_hvac_mode(HVAC_MODE_HEAT)
                     await self._async_internal_set_temperature(self._target_temp_low)
             else:
+                _LOGGER.info("Turning on %s mode", self._hvac_mode)
                 await self._async_internal_set_hvac_mode(self._hvac_mode)
                 if self._hvac_mode in (HVAC_MODE_COOL, HVAC_MODE_HEAT):
                     await self._async_internal_set_temperature(self._target_temp)
@@ -623,28 +624,28 @@ class DualModeGenericThermostat(ClimateEntity, RestoreEntity):
 
         data = {ATTR_ENTITY_ID: self.climate_entity_id, ATTR_HVAC_MODE: hvac_mode}
         await self.hass.services.async_call(CLIMATE_DOMAIN, SERVICE_SET_HVAC_MODE, data)
-        await self.async_write_ha_state()
+        self.async_write_ha_state()
 
     async def _async_internal_set_temperature(self, temperature: float):
         """Set new hvac mode."""
         data = {ATTR_ENTITY_ID: self.climate_entity_id, ATTR_TEMPERATURE: temperature}
         await self.hass.services.async_call(CLIMATE_DOMAIN, SERVICE_SET_TEMPERATURE, data)
-        await self.async_write_ha_state()
+        self.async_write_ha_state()
 
     async def async_set_preset_mode(self, preset_mode: str):
         """Set new preset mode."""
         data = {ATTR_ENTITY_ID: self.climate_entity_id, ATTR_PRESET_MODE: preset_mode}
         await self.hass.services.async_call(CLIMATE_DOMAIN, SERVICE_SET_PRESET_MODE, data)
-        await self.async_write_ha_state()
+        self.async_write_ha_state()
 
     async def async_set_fan_mode(self, fan_mode: str):
         """Set new preset mode."""
         data = {ATTR_ENTITY_ID: self.climate_entity_id, ATTR_FAN_MODE: fan_mode}
         await self.hass.services.async_call(CLIMATE_DOMAIN, SERVICE_SET_FAN_MODE, data)
-        await self.async_write_ha_state()
+        self.async_write_ha_state()
 
     async def async_set_swing_mode(self, swing_mode: str):
         """Set new preset mode."""
         data = {ATTR_ENTITY_ID: self.climate_entity_id, ATTR_SWING_MODE: swing_mode}
         await self.hass.services.async_call(CLIMATE_DOMAIN, SERVICE_SET_SWING_MODE, data)
-        await self.async_write_ha_state()
+        self.async_write_ha_state()
