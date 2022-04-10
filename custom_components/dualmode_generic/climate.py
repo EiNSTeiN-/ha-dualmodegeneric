@@ -436,7 +436,7 @@ class DualModeGenericThermostat(ClimateEntity, RestoreEntity):
             _LOGGER.error("Unrecognized hvac mode: %s", hvac_mode)
             return
         # Ensure we update the current operation after changing the mode
-        self.async_write_ha_state()
+        await self.async_write_ha_state()
 
     async def async_set_temperature(self, **kwargs):
         """Set new target temperature."""
@@ -456,7 +456,7 @@ class DualModeGenericThermostat(ClimateEntity, RestoreEntity):
             if self._climate_entity_hvac_mode() == HVAC_MODE_COOL:
                 await self._async_internal_set_temperature(temp_high)
         await self._async_control_heating(force=True)
-        self.async_write_ha_state()
+        await self.async_write_ha_state()
 
     @property
     def min_temp(self):
@@ -483,7 +483,7 @@ class DualModeGenericThermostat(ClimateEntity, RestoreEntity):
         _LOGGER.info("Received state change callback from climate entity")
         await self._state_changed(new_state)
         await self._async_control_heating()
-        self.async_write_ha_state()
+        await self.async_write_ha_state()
 
     async def _state_changed(self, new_state):
         if new_state is None or new_state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
@@ -546,7 +546,7 @@ class DualModeGenericThermostat(ClimateEntity, RestoreEntity):
         if state:
             return state.state
 
-    async def _async_control_heating(self, time=None, force=False):
+    async def _async_control_heating(self, force=False):
         """Check if we need to turn heating on or off."""
         async with self._temp_lock:
             if not self._active and None not in (self._cur_temp, self._target_temp):
@@ -562,7 +562,7 @@ class DualModeGenericThermostat(ClimateEntity, RestoreEntity):
                 return
 
             # This variable is used for the long_enough condition and for the LOG Messages
-            if not force and time is None:
+            if not force:
                 # If the `force` argument is True, we
                 # ignore `min_cycle_duration`.
                 # If the `time` argument is not none, we were invoked for
@@ -618,36 +618,33 @@ class DualModeGenericThermostat(ClimateEntity, RestoreEntity):
 
     async def _async_internal_set_hvac_mode(self, hvac_mode: str):
         """Set new hvac mode."""
-        if hvac_mode in self.hvac_modes:
-            data = {ATTR_ENTITY_ID: self.climate_entity_id, ATTR_HVAC_MODE: hvac_mode}
-            await self.hass.services.async_call(CLIMATE_DOMAIN, SERVICE_SET_HVAC_MODE, data)
+        if hvac_mode not in self.hvac_modes:
+            return
 
-            self.async_write_ha_state()
+        data = {ATTR_ENTITY_ID: self.climate_entity_id, ATTR_HVAC_MODE: hvac_mode}
+        await self.hass.services.async_call(CLIMATE_DOMAIN, SERVICE_SET_HVAC_MODE, data)
+        await self.async_write_ha_state()
 
     async def _async_internal_set_temperature(self, temperature: float):
         """Set new hvac mode."""
         data = {ATTR_ENTITY_ID: self.climate_entity_id, ATTR_TEMPERATURE: temperature}
         await self.hass.services.async_call(CLIMATE_DOMAIN, SERVICE_SET_TEMPERATURE, data)
-
-        self.async_write_ha_state()
+        await self.async_write_ha_state()
 
     async def async_set_preset_mode(self, preset_mode: str):
         """Set new preset mode."""
         data = {ATTR_ENTITY_ID: self.climate_entity_id, ATTR_PRESET_MODE: preset_mode}
         await self.hass.services.async_call(CLIMATE_DOMAIN, SERVICE_SET_PRESET_MODE, data)
-
-        self.async_write_ha_state()
+        await self.async_write_ha_state()
 
     async def async_set_fan_mode(self, fan_mode: str):
         """Set new preset mode."""
         data = {ATTR_ENTITY_ID: self.climate_entity_id, ATTR_FAN_MODE: fan_mode}
         await self.hass.services.async_call(CLIMATE_DOMAIN, SERVICE_SET_FAN_MODE, data)
-
-        self.async_write_ha_state()
+        await self.async_write_ha_state()
 
     async def async_set_swing_mode(self, swing_mode: str):
         """Set new preset mode."""
         data = {ATTR_ENTITY_ID: self.climate_entity_id, ATTR_SWING_MODE: swing_mode}
         await self.hass.services.async_call(CLIMATE_DOMAIN, SERVICE_SET_SWING_MODE, data)
-
-        self.async_write_ha_state()
+        await self.async_write_ha_state()
