@@ -514,6 +514,18 @@ class DualModeGenericThermostat(ClimateEntity, RestoreEntity):
             _LOGGER.info("Climate entity state change to %s while thermostat was set to %s", new_state.state, self._hvac_mode)
             self._hvac_mode = new_state.state
 
+        if ATTR_MIN_TEMP in new_state.attributes and (min_temp := new_state.attributes[ATTR_MIN_TEMP]) is not None:
+            if self._target_temp is None or self._target_temp < min_temp:
+                self._target_temp = min_temp
+            if self._target_temp_low is None or self._target_temp_low < min_temp:
+                self._target_temp_low = min_temp
+
+        if ATTR_MAX_TEMP in new_state.attributes and (max_temp := new_state.attributes[ATTR_MAX_TEMP]) is not None:
+            if self._target_temp is None or self._target_temp > max_temp:
+                self._target_temp = max_temp
+            if self._target_temp_high is None or self._target_temp_high > max_temp:
+                self._target_temp_high = max_temp
+
     @callback
     def _async_update_temp(self, temp):
         """Update thermostat with latest state from sensor."""
