@@ -212,10 +212,13 @@ class DualModeGenericThermostat(ClimateEntity, RestoreEntity):
                     elif self._hvac_mode == HVAC_MODE_HEAT_COOL:
                         self._target_temp_high = self.max_temp
                         self._target_temp_low = self.min_temp
+                        self._target_temp = self.min_temp
                     else:
                         self._target_temp = self.min_temp
-                    if self._support_flags & SUPPORT_TARGET_TEMPERATURE_RANGE == SUPPORT_TARGET_TEMPERATURE_RANGE:
+
+                    if self._target_temp_high is None:
                         self._target_temp_high = self.max_temp
+                    if self._target_temp_low is None:
                         self._target_temp_low = self.min_temp
                     _LOGGER.warning(
                         "Undefined target temperature," "falling back to %s",
