@@ -249,6 +249,7 @@ class DualModeGenericThermostat(ClimateEntity, RestoreEntity):
             elif self._hvac_mode == HVAC_MODE_HEAT_COOL:
                 self._target_temp_high = self.max_temp
                 self._target_temp_low = self.min_temp
+                self._target_temp = self.min_temp
             else:
                 self._target_temp = self.min_temp
             _LOGGER.warning("No previously saved temperature, setting to %s", self._target_temp)
