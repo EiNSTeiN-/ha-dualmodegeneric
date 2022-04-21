@@ -450,13 +450,11 @@ class DualModeGenericThermostat(ClimateEntity, RestoreEntity):
             return
 
         if ATTR_CURRENT_TEMPERATURE in new_state.attributes and (temp := new_state.attributes[ATTR_CURRENT_TEMPERATURE]) is not None:
-            _LOGGER.debug("New current temperature from entity: %s", temp)
             self._async_update_temp(temp)
         else:
             _LOGGER.debug("Current temperature is not present in climate entity state")
 
         if ATTR_TEMPERATURE in new_state.attributes and (temp := new_state.attributes[ATTR_TEMPERATURE]) is not None:
-            _LOGGER.debug("New target temperature from entity: %s for %s mode", temp, new_state.state)
             self._async_update_target_temp(new_state.state, temp)
         else:
             _LOGGER.debug("Current temperature is not present in climate entity state")
@@ -481,21 +479,22 @@ class DualModeGenericThermostat(ClimateEntity, RestoreEntity):
     def _async_update_temp(self, temp):
         """Update thermostat with latest state from sensor."""
         try:
+            _LOGGER.debug("New current temperature from entity: %s", temp)
             self._cur_temp = float(temp)
         except ValueError as ex:
             _LOGGER.error("Unable to update from sensor: %s", ex)
 
     @callback
-    def _async_update_target_temp(self, state, temp):
+    def _async_update_target_temp(self, new_state, temp):
         """Update thermostat with latest state from climate entity."""
         try:
-            if state == HVAC_MODE_HEAT:
+            if new_state == HVAC_MODE_HEAT:
                 if self._hvac_mode in (HVAC_MODE_HEAT, HVAC_MODE_HEAT_COOL) and self._target_temp_low != float(temp):
-                    _LOGGER.info("New target_temp_low %s changed from %s", temp, self._target_temp_low)
+                    _LOGGER.info("New target_temp_low %s changed from %s for %s mode", temp, self._target_temp_low, new_state)
                     self._target_temp_low = float(temp)
-            elif state == HVAC_MODE_COOL:
+            elif new_state == HVAC_MODE_COOL:
                 if self._hvac_mode in (HVAC_MODE_COOL, HVAC_MODE_HEAT_COOL) and self._target_temp_high != float(temp):
-                    _LOGGER.info("New target_temp_high %s changed from %s", temp, self._target_temp_low)
+                    _LOGGER.info("New target_temp_high %s changed from %s for %s mode", temp, self._target_temp_high, new_state)
                     self._target_temp_high = float(temp)
 
         except ValueError as ex:
@@ -536,19 +535,20 @@ class DualModeGenericThermostat(ClimateEntity, RestoreEntity):
             if self._hvac_mode == HVAC_MODE_HEAT_COOL:
                 if self._is_too_hot():
                     _LOGGER.info("Turning on cooling mode")
-                    await self._async_internal_set_hvac_mode(HVAC_MODE_COOL)
-                    await self._async_internal_set_temperature(self._target_temp_high)
+                    if await self._async_internal_set_hvac_mode(HVAC_MODE_COOL):
+                        await self._async_internal_set_temperature(self._target_temp_high)
+
                 elif self._is_too_cold():
                     _LOGGER.info("Turning on heating mode")
-                    await self._async_internal_set_hvac_mode(HVAC_MODE_HEAT)
-                    await self._async_internal_set_temperature(self._target_temp_low)
+                    if await self._async_internal_set_hvac_mode(HVAC_MODE_HEAT):
+                        await self._async_internal_set_temperature(self._target_temp_low)
             else:
                 _LOGGER.info("Turning on %s mode", self._hvac_mode)
-                await self._async_internal_set_hvac_mode(self._hvac_mode)
-                if self._hvac_mode == HVAC_MODE_COOL:
-                    await self._async_internal_set_temperature(self._target_temp_high)
-                if self._hvac_mode == HVAC_MODE_HEAT:
-                    await self._async_internal_set_temperature(self._target_temp_low)
+                if await self._async_internal_set_hvac_mode(self._hvac_mode):
+                    if self._hvac_mode == HVAC_MODE_COOL:
+                        await self._async_internal_set_temperature(self._target_temp_high)
+                    if self._hvac_mode == HVAC_MODE_HEAT:
+                        await self._async_internal_set_temperature(self._target_temp_low)
 
     @property
     def supported_features(self):
@@ -581,29 +581,44 @@ class DualModeGenericThermostat(ClimateEntity, RestoreEntity):
             return
 
         data = {ATTR_ENTITY_ID: self.climate_entity_id, ATTR_HVAC_MODE: hvac_mode}
-        await self.hass.services.async_call(CLIMATE_DOMAIN, SERVICE_SET_HVAC_MODE, data)
+        result = await self.hass.services.async_call(CLIMATE_DOMAIN, SERVICE_SET_HVAC_MODE, data, blocking=True)
+        if not result:
+            _LOGGER.debug("%s service call failed", SERVICE_SET_HVAC_MODE)
         self.async_write_ha_state()
+        return result
 
     async def _async_internal_set_temperature(self, temperature: float):
         """Set new hvac mode."""
         data = {ATTR_ENTITY_ID: self.climate_entity_id, ATTR_TEMPERATURE: temperature}
-        await self.hass.services.async_call(CLIMATE_DOMAIN, SERVICE_SET_TEMPERATURE, data)
+        result = await self.hass.services.async_call(CLIMATE_DOMAIN, SERVICE_SET_TEMPERATURE, data, blocking=True)
+        if not result:
+            _LOGGER.debug("%s service call failed", SERVICE_SET_TEMPERATURE)
         self.async_write_ha_state()
+        return result
 
     async def async_set_preset_mode(self, preset_mode: str):
         """Set new preset mode."""
         data = {ATTR_ENTITY_ID: self.climate_entity_id, ATTR_PRESET_MODE: preset_mode}
-        await self.hass.services.async_call(CLIMATE_DOMAIN, SERVICE_SET_PRESET_MODE, data)
+        result = await self.hass.services.async_call(CLIMATE_DOMAIN, SERVICE_SET_PRESET_MODE, data, blocking=True)
+        if not result:
+            _LOGGER.debug("%s service call failed", SERVICE_SET_PRESET_MODE)
         self.async_write_ha_state()
+        return result
 
     async def async_set_fan_mode(self, fan_mode: str):
         """Set new preset mode."""
         data = {ATTR_ENTITY_ID: self.climate_entity_id, ATTR_FAN_MODE: fan_mode}
-        await self.hass.services.async_call(CLIMATE_DOMAIN, SERVICE_SET_FAN_MODE, data)
+        result = await self.hass.services.async_call(CLIMATE_DOMAIN, SERVICE_SET_FAN_MODE, data, blocking=True)
+        if not result:
+            _LOGGER.debug("%s service call failed", SERVICE_SET_FAN_MODE)
         self.async_write_ha_state()
+        return result
 
     async def async_set_swing_mode(self, swing_mode: str):
         """Set new preset mode."""
         data = {ATTR_ENTITY_ID: self.climate_entity_id, ATTR_SWING_MODE: swing_mode}
-        await self.hass.services.async_call(CLIMATE_DOMAIN, SERVICE_SET_SWING_MODE, data)
+        result = await self.hass.services.async_call(CLIMATE_DOMAIN, SERVICE_SET_SWING_MODE, data, blocking=True)
+        if not result:
+            _LOGGER.debug("%s service call failed", SERVICE_SET_SWING_MODE)
         self.async_write_ha_state()
+        return result
