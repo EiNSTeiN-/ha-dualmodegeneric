@@ -404,7 +404,9 @@ class DualModeGenericThermostat(ClimateEntity, RestoreEntity):
                 self._target_temp_high = temperature
             if self._hvac_mode == HVAC_MODE_HEAT:
                 self._target_temp_low = temperature
-            if self._climate_entity_hvac_mode() in (HVAC_MODE_HEAT, HVAC_MODE_COOL):
+
+            mode = self._climate_entity_hvac_mode()
+            if mode == self._hvac_mode and mode in (HVAC_MODE_HEAT, HVAC_MODE_COOL):
                 await self._async_internal_set_temperature(temperature)
         if temp_low is not None:
             self._target_temp_low = temp_low
@@ -414,6 +416,16 @@ class DualModeGenericThermostat(ClimateEntity, RestoreEntity):
             self._target_temp_high = temp_high
             if self._climate_entity_hvac_mode() == HVAC_MODE_COOL:
                 await self._async_internal_set_temperature(temp_high)
+
+        difference = max(self._cold_tolerance, self._hot_tolerance, 1)
+        if self._target_temp_low > self._target_temp_high or (self._target_temp_high - self._target_temp_low) < difference:
+                # If user adjusted the low temp, then adjust high temp by at least the expected difference.
+                # And vice versa if they adjusted the high temp instead.
+            if temp_low is not None:
+                self._target_temp_high = self._target_temp_low + difference
+            else:
+                self._target_temp_low = self._target_temp_high - difference
+
         await self._async_control_heating(force=True)
         self.async_write_ha_state()
 
@@ -439,10 +451,11 @@ class DualModeGenericThermostat(ClimateEntity, RestoreEntity):
 
     async def _async_climate_state_changed(self, entity_id, old_state, new_state):
         """Handle temperature changes."""
-        _LOGGER.info("Received state change callback from climate entity")
-        await self._state_changed(new_state)
-        await self._async_control_heating()
-        self.async_write_ha_state()
+        async with self._temp_lock:
+            _LOGGER.info("Received state change callback from climate entity")
+            await self._state_changed(new_state)
+            await self._async_control_heating()
+            self.async_write_ha_state()
 
     async def _state_changed(self, new_state):
         if new_state is None or new_state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
@@ -534,12 +547,12 @@ class DualModeGenericThermostat(ClimateEntity, RestoreEntity):
 
             if self._hvac_mode == HVAC_MODE_HEAT_COOL:
                 if self._is_too_hot():
-                    _LOGGER.info("Turning on cooling mode")
+                    _LOGGER.info("Turning on cooling mode with target=%s", self._target_temp_high)
                     if await self._async_internal_set_hvac_mode(HVAC_MODE_COOL):
                         await self._async_internal_set_temperature(self._target_temp_high)
 
                 elif self._is_too_cold():
-                    _LOGGER.info("Turning on heating mode")
+                    _LOGGER.info("Turning on heating mode with target=%s", self._target_temp_low)
                     if await self._async_internal_set_hvac_mode(HVAC_MODE_HEAT):
                         await self._async_internal_set_temperature(self._target_temp_low)
             else:
@@ -559,9 +572,9 @@ class DualModeGenericThermostat(ClimateEntity, RestoreEntity):
     def _is_too_cold(self):
         # Use the midpoint in the set range as our target temp when in range mode
         # return ((self._target_temp_low + self._target_temp_high)/2) >= self._cur_temp + self._cold_tolerance
-        too_cold = self._target_temp_high >= self._cur_temp + self._cold_tolerance
+        too_cold = self._cur_temp <= self._target_temp_high - self._cold_tolerance
         _LOGGER.info(
-            "_is_too_cold: %s| %s,%s,%s",
+            "_is_too_cold: %s| target high=%s,cur=%s,tolerance=%s",
             too_cold, self._target_temp_high, self._cur_temp, self._cold_tolerance
         )
         return too_cold
@@ -570,7 +583,7 @@ class DualModeGenericThermostat(ClimateEntity, RestoreEntity):
     def _is_too_hot(self):
         too_hot = self._cur_temp >= self._target_temp_low + self._hot_tolerance
         _LOGGER.info(
-            "_is_too_hot: %s| %s,%s,%s",
+            "_is_too_hot: %s| cur=%s,target low=%s,tolerance=%s",
             too_hot, self._cur_temp, self._target_temp_low, self._hot_tolerance
         )
         return too_hot
