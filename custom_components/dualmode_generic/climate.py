@@ -451,7 +451,7 @@ class DualModeGenericThermostat(ClimateEntity, RestoreEntity):
 
     async def _async_climate_state_changed(self, entity_id, old_state, new_state):
         """Handle temperature changes."""
-        async with self._temp_lock:
+        if not self._temp_lock.locked():
             _LOGGER.info("Received state change callback from climate entity")
             await self._state_changed(new_state)
             await self._async_control_heating()
