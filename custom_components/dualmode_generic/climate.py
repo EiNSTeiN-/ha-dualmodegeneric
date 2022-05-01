@@ -456,6 +456,9 @@ class DualModeGenericThermostat(ClimateEntity, RestoreEntity):
             await self._state_changed(new_state)
             await self._async_control_heating()
             self.async_write_ha_state()
+        else:
+            _LOGGER.debug("Not processing climate state change")
+
 
     async def _state_changed(self, new_state):
         if new_state is None or new_state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
@@ -546,12 +549,15 @@ class DualModeGenericThermostat(ClimateEntity, RestoreEntity):
                         return
 
             if self._hvac_mode == HVAC_MODE_HEAT_COOL:
-                if self._is_too_hot():
+                if self._is_comfortable_temperature():
+                    # Do nothing except prevent the other two conditions from triggering
+                    pass
+                elif self._is_hot_enough():
                     _LOGGER.info("Turning on cooling mode with target=%s", self._target_temp_high)
                     if await self._async_internal_set_hvac_mode(HVAC_MODE_COOL):
                         await self._async_internal_set_temperature(self._target_temp_high)
 
-                elif self._is_too_cold():
+                elif self._is_cold_enough():
                     _LOGGER.info("Turning on heating mode with target=%s", self._target_temp_low)
                     if await self._async_internal_set_hvac_mode(HVAC_MODE_HEAT):
                         await self._async_internal_set_temperature(self._target_temp_low)
@@ -569,7 +575,7 @@ class DualModeGenericThermostat(ClimateEntity, RestoreEntity):
         return self._support_flags
 
     # checks whether it is cold enough to switch to heating mode
-    def _is_too_cold(self):
+    def _is_cold_enough(self):
         # Use the midpoint in the set range as our target temp when in range mode
         # return ((self._target_temp_low + self._target_temp_high)/2) >= self._cur_temp + self._cold_tolerance
         too_cold = self._cur_temp <= self._target_temp_high - self._cold_tolerance
@@ -580,13 +586,16 @@ class DualModeGenericThermostat(ClimateEntity, RestoreEntity):
         return too_cold
 
     # checks whether it is hot enough to switch to cooling mode
-    def _is_too_hot(self):
+    def _is_hot_enough(self):
         too_hot = self._cur_temp >= self._target_temp_low + self._hot_tolerance
         _LOGGER.info(
             "_is_too_hot: %s| cur=%s,target low=%s,tolerance=%s",
             too_hot, self._cur_temp, self._target_temp_low, self._hot_tolerance
         )
         return too_hot
+
+    def _is_comfortable_temperature(self):
+        return self._is_cold_enough() and self._is_hot_enough()
 
     async def _async_internal_set_hvac_mode(self, hvac_mode: str):
         """Set new hvac mode."""
