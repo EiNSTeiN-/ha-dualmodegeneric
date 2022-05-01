@@ -1,6 +1,6 @@
 {
     "domain": "dualmode_ac",
-    "name": "Dual-Mode Thermostat for controlling heat pump AC entity",
+    "name": "Dual-Mode Thermostat for AC unit",
     "documentation": "https://github.com/EiNSTeiN-/ha-dualmodegeneric",
     "version": "0.2",
     "dependencies": [],
