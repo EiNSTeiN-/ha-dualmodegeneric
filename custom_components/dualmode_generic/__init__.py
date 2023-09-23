@@ -1,4 +1,4 @@
 """The dualmode_ac thermostat component."""
 
-DOMAIN = "dualmode_ac"
+DOMAIN = "proxy_climate"
 PLATFORMS = ["climate"]
