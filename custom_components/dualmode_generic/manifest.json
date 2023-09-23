@@ -16,9 +16,5 @@
     },
     "version": "0.1.0",
     "requirements": [],
-    "translations": [
-        "en",
-        "de"
-    ],
     "frontend": true
 }
