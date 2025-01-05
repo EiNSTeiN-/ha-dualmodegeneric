@@ -16,7 +16,7 @@ from homeassistant.const import (
     ATTR_UNIT_OF_MEASUREMENT,
     UnitOfTemperature,
 )
-from homeassistant.components.climate import PLATFORM_SCHEMA, ClimateEntity
+from homeassistant.components.climate import PLATFORM_SCHEMA, ClimateEntity, ClimateEntityFeature, HVACAction, HVACMode
 from homeassistant.components.climate.const import (
     ATTR_PRESET_MODE,
     ATTR_TARGET_TEMP_LOW,
@@ -32,28 +32,11 @@ from homeassistant.components.climate.const import (
     ATTR_SWING_MODES,
     ATTR_MIN_TEMP,
     ATTR_MAX_TEMP,
-    CURRENT_HVAC_COOL,
-    CURRENT_HVAC_HEAT,
-    CURRENT_HVAC_FAN,
-    CURRENT_HVAC_DRY,
-    CURRENT_HVAC_IDLE,
-    CURRENT_HVAC_OFF,
-    HVAC_MODE_COOL,
-    HVAC_MODE_HEAT,
-    HVAC_MODE_FAN_ONLY,
-    HVAC_MODE_DRY,
-    HVAC_MODE_OFF,
-    HVAC_MODE_HEAT_COOL,
     SERVICE_SET_HVAC_MODE,
     SERVICE_SET_PRESET_MODE,
     SERVICE_SET_FAN_MODE,
     SERVICE_SET_SWING_MODE,
     SERVICE_SET_TEMPERATURE,
-    SUPPORT_PRESET_MODE,
-    SUPPORT_TARGET_TEMPERATURE,
-    SUPPORT_TARGET_TEMPERATURE_RANGE,
-    SUPPORT_SWING_MODE,
-    SUPPORT_FAN_MODE,
     DOMAIN as CLIMATE_DOMAIN,
 )
 from homeassistant.const import (
@@ -89,7 +72,8 @@ CONF_MIN_DUR = "min_cycle_duration"
 CONF_COLD_TOLERANCE = "cold_tolerance"
 CONF_HOT_TOLERANCE = "hot_tolerance"
 CONF_INITIAL_HVAC_MODE = "initial_hvac_mode"
-SUPPORT_FLAGS = SUPPORT_TARGET_TEMPERATURE | SUPPORT_SWING_MODE | SUPPORT_FAN_MODE | SUPPORT_PRESET_MODE | SUPPORT_TARGET_TEMPERATURE_RANGE
+SUPPORT_FLAGS = ClimateEntityFeature.TARGET_TEMPERATURE | ClimateEntityFeature.SWING_MODE | ClimateEntityFeature.FAN_MODE | ClimateEntityFeature.PRESET_MODE | ClimateEntityFeature.TARGET_TEMPERATURE_RANGE
+
 
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     {
@@ -101,7 +85,7 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
         vol.Optional(CONF_TARGET_TEMP_HIGH): vol.Coerce(float),
         vol.Optional(CONF_TARGET_TEMP_LOW): vol.Coerce(float),
         vol.Optional(CONF_INITIAL_HVAC_MODE): vol.In(
-            [HVAC_MODE_COOL, HVAC_MODE_HEAT, HVAC_MODE_FAN_ONLY, HVAC_MODE_DRY, HVAC_MODE_OFF, HVAC_MODE_HEAT_COOL]
+            [HVACMode.COOL, HVACMode.HEAT, HVACMode.FAN_ONLY, HVACMode.DRY, HVACMode.OFF, HVACMode.HEAT_COOL]
         ),
         vol.Optional(CONF_UNIQUE_ID): cv.string,
     }
@@ -207,7 +191,7 @@ class DualModeGenericThermostat(ClimateEntity, RestoreEntity):
             self._target_temp_high = self.max_temp
         if not self._hvac_mode:
             # Set default state to _initial_hvac_mode, or Off if not specified
-            self._hvac_mode = self._initial_hvac_mode or HVAC_MODE_OFF
+            self._hvac_mode = self._initial_hvac_mode or HVACMode.OFF
 
         @callback
         def _async_startup(event=None):
@@ -276,49 +260,49 @@ class DualModeGenericThermostat(ClimateEntity, RestoreEntity):
     def hvac_action(self):
         """Return the current running hvac operation if supported.
 
-        Need to be one of CURRENT_HVAC_*.
+        Need to be a HVACAction.
         """
-        if self._hvac_mode == HVAC_MODE_OFF:
-            return CURRENT_HVAC_OFF
-        if self._hvac_mode == HVAC_MODE_COOL:
-            return CURRENT_HVAC_COOL if self._cur_temp and self._target_temp_high and self._cur_temp > self._target_temp_high else CURRENT_HVAC_IDLE
-        if self._hvac_mode == HVAC_MODE_HEAT:
-            return CURRENT_HVAC_HEAT if self._cur_temp and self._target_temp_low and self._cur_temp < self._target_temp_low else CURRENT_HVAC_IDLE
-        if self._hvac_mode == HVAC_MODE_FAN_ONLY:
-            return CURRENT_HVAC_FAN
-        if self._hvac_mode == HVAC_MODE_DRY:
-            return CURRENT_HVAC_DRY
-        if self._hvac_mode == HVAC_MODE_HEAT_COOL:
+        if self._hvac_mode == HVACMode.OFF:
+            return HVACAction.OFF
+        if self._hvac_mode == HVACMode.COOL:
+            return HVACAction.COOLING if self._cur_temp and self._target_temp_high and self._cur_temp > self._target_temp_high else HVACAction.IDLE
+        if self._hvac_mode == HVACMode.HEAT:
+            return HVACAction.HEATING if self._cur_temp and self._target_temp_low and self._cur_temp < self._target_temp_low else HVACAction.IDLE
+        if self._hvac_mode == HVACMode.FAN_ONLY:
+            return HVACAction.FAN
+        if self._hvac_mode == HVACMode.DRY:
+            return HVACAction.DRYING
+        if self._hvac_mode == HVACMode.HEAT_COOL:
             mode = self._climate_entity_hvac_mode()
-            if mode == HVAC_MODE_HEAT:
-                return CURRENT_HVAC_HEAT if self._cur_temp and self._target_temp_low and self._cur_temp < self._target_temp_low else CURRENT_HVAC_IDLE
-            elif mode == HVAC_MODE_COOL:
-                return CURRENT_HVAC_COOL if self._cur_temp and self._target_temp_high and self._cur_temp > self._target_temp_high else CURRENT_HVAC_IDLE
+            if mode == HVACMode.HEAT:
+                return HVACAction.HEATING if self._cur_temp and self._target_temp_low and self._cur_temp < self._target_temp_low else HVACAction.IDLE
+            elif mode == HVACMode.COOL:
+                return HVACAction.COOLING if self._cur_temp and self._target_temp_high and self._cur_temp > self._target_temp_high else HVACAction.IDLE
             else:
                 _LOGGER.info("Climate entity returned unexpected state: %s, assuming idle", mode)
-                return CURRENT_HVAC_IDLE
-        return CURRENT_HVAC_IDLE
+                return HVACAction.IDLE
+        return HVACAction.IDLE
 
     @property
     def target_temperature(self):
         """Return the temperature we try to reach."""
-        if self._hvac_mode == HVAC_MODE_HEAT:
+        if self._hvac_mode == HVACMode.HEAT:
             return self._target_temp_low
-        if self._hvac_mode == HVAC_MODE_COOL:
+        if self._hvac_mode == HVACMode.COOL:
             return self._target_temp_high
         return None
 
     @property
     def target_temperature_high(self):
         """Return the upper temperature we try to reach when in range mode."""
-        if self._hvac_mode == HVAC_MODE_HEAT_COOL:
+        if self._hvac_mode == HVACMode.HEAT_COOL:
             return self._target_temp_high
         return None
 
     @property
     def target_temperature_low(self):
         """Return the lower temperature we try to reach when in range mode."""
-        if self._hvac_mode == HVAC_MODE_HEAT_COOL:
+        if self._hvac_mode == HVACMode.HEAT_COOL:
             return self._target_temp_low
         return None
 
@@ -327,7 +311,7 @@ class DualModeGenericThermostat(ClimateEntity, RestoreEntity):
         """List of available operation modes."""
         state = self.hass.states.get(self.climate_entity_id)
         if state and ATTR_HVAC_MODES in state.attributes:
-            return [HVAC_MODE_HEAT_COOL] + state.attributes[ATTR_HVAC_MODES]
+            return [HVACMode.HEAT_COOL] + state.attributes[ATTR_HVAC_MODES]
 
     @property
     def preset_mode(self):
@@ -400,21 +384,21 @@ class DualModeGenericThermostat(ClimateEntity, RestoreEntity):
         temp_low = kwargs.get(ATTR_TARGET_TEMP_LOW)
         temp_high = kwargs.get(ATTR_TARGET_TEMP_HIGH)
         if temperature is not None:
-            if self._hvac_mode == HVAC_MODE_COOL:
+            if self._hvac_mode == HVACMode.COOL:
                 self._target_temp_high = temperature
-            if self._hvac_mode == HVAC_MODE_HEAT:
+            if self._hvac_mode == HVACMode.HEAT:
                 self._target_temp_low = temperature
 
             mode = self._climate_entity_hvac_mode()
-            if mode == self._hvac_mode and mode in (HVAC_MODE_HEAT, HVAC_MODE_COOL):
+            if mode == self._hvac_mode and mode in (HVACMode.HEAT, HVACMode.COOL):
                 await self._async_internal_set_temperature(temperature)
         if temp_low is not None:
             self._target_temp_low = temp_low
-            if self._climate_entity_hvac_mode() == HVAC_MODE_HEAT:
+            if self._climate_entity_hvac_mode() == HVACMode.HEAT:
                 await self._async_internal_set_temperature(temp_low)
         if temp_high is not None:
             self._target_temp_high = temp_high
-            if self._climate_entity_hvac_mode() == HVAC_MODE_COOL:
+            if self._climate_entity_hvac_mode() == HVACMode.COOL:
                 await self._async_internal_set_temperature(temp_high)
 
         difference = max(self._cold_tolerance, self._hot_tolerance, 1)
@@ -475,8 +459,8 @@ class DualModeGenericThermostat(ClimateEntity, RestoreEntity):
         else:
             _LOGGER.debug("Current temperature is not present in climate entity state")
 
-        if self._hvac_mode == HVAC_MODE_HEAT_COOL:
-            if new_state.state not in [HVAC_MODE_HEAT, HVAC_MODE_COOL]:
+        if self._hvac_mode == HVACMode.HEAT_COOL:
+            if new_state.state not in [HVACMode.HEAT, HVACMode.COOL]:
                 _LOGGER.info("Climate entity state change to %s while thermostat was set to %s", new_state.state, self._hvac_mode)
                 self._hvac_mode = new_state.state
         elif self._hvac_mode != new_state.state:
@@ -504,12 +488,12 @@ class DualModeGenericThermostat(ClimateEntity, RestoreEntity):
     def _async_update_target_temp(self, new_state, temp):
         """Update thermostat with latest state from climate entity."""
         try:
-            if new_state == HVAC_MODE_HEAT:
-                if self._hvac_mode in (HVAC_MODE_HEAT, HVAC_MODE_HEAT_COOL) and self._target_temp_low != float(temp):
+            if new_state == HVACMode.HEAT:
+                if self._hvac_mode in (HVACMode.HEAT, HVACMode.HEAT_COOL) and self._target_temp_low != float(temp):
                     _LOGGER.info("New target_temp_low %s changed from %s for %s mode", temp, self._target_temp_low, new_state)
                     self._target_temp_low = float(temp)
-            elif new_state == HVAC_MODE_COOL:
-                if self._hvac_mode in (HVAC_MODE_COOL, HVAC_MODE_HEAT_COOL) and self._target_temp_high != float(temp):
+            elif new_state == HVACMode.COOL:
+                if self._hvac_mode in (HVACMode.COOL, HVACMode.HEAT_COOL) and self._target_temp_high != float(temp):
                     _LOGGER.info("New target_temp_high %s changed from %s for %s mode", temp, self._target_temp_high, new_state)
                     self._target_temp_high = float(temp)
 
@@ -529,7 +513,7 @@ class DualModeGenericThermostat(ClimateEntity, RestoreEntity):
                 self._active = True
                 _LOGGER.info("Obtained current and target temperature. Generic Dual-mode thermostat active.")
 
-            if not self._active or self._hvac_mode == HVAC_MODE_OFF:
+            if not self._active or self._hvac_mode == HVACMode.OFF:
                 return
 
             # This variable is used for the long_enough condition and for the LOG Messages
@@ -548,25 +532,25 @@ class DualModeGenericThermostat(ClimateEntity, RestoreEntity):
                     if not long_enough:
                         return
 
-            if self._hvac_mode == HVAC_MODE_HEAT_COOL:
+            if self._hvac_mode == HVACMode.HEAT_COOL:
                 if self._is_comfortable_temperature():
                     # Do nothing except prevent the other two conditions from triggering
                     pass
                 elif self._is_hot_enough():
                     _LOGGER.info("Turning on cooling mode with target=%s", self._target_temp_high)
-                    if await self._async_internal_set_hvac_mode(HVAC_MODE_COOL):
+                    if await self._async_internal_set_hvac_mode(HVACMode.COOL):
                         await self._async_internal_set_temperature(self._target_temp_high)
 
                 elif self._is_cold_enough():
                     _LOGGER.info("Turning on heating mode with target=%s", self._target_temp_low)
-                    if await self._async_internal_set_hvac_mode(HVAC_MODE_HEAT):
+                    if await self._async_internal_set_hvac_mode(HVACMode.HEAT):
                         await self._async_internal_set_temperature(self._target_temp_low)
             else:
                 _LOGGER.info("Turning on %s mode", self._hvac_mode)
                 if await self._async_internal_set_hvac_mode(self._hvac_mode):
-                    if self._hvac_mode == HVAC_MODE_COOL:
+                    if self._hvac_mode == HVACMode.COOL:
                         await self._async_internal_set_temperature(self._target_temp_high)
-                    if self._hvac_mode == HVAC_MODE_HEAT:
+                    if self._hvac_mode == HVACMode.HEAT:
                         await self._async_internal_set_temperature(self._target_temp_low)
 
     @property
