@@ -13,10 +13,10 @@ This component is based on [ha-dualmodegeneric](https://github.com/zacs/ha-dualm
 
 ## Installation (Manual)
 1. Download this repository as a ZIP (green button, top right) and unzip the archive
-2. Copy `/custom_components/dualmode_ac` to your `<config_dir>/custom_components/` directory
+2. Copy the contents of `/custom_components/dualmode_generic` into `<config_dir>/custom_components/dualmode_ac/`.
    * You will need to create the `custom_components` folder if it does not exist
    * On Home Assistant OS the final location will be `/config/custom_components/dualmode_ac`
-   * The directory name must match the `dualmode_ac` integration domain.
+   * The installed directory must match the `dualmode_ac` integration domain. The repository retains its historic `dualmode_generic` source folder so existing HACS installations can update without cached-path errors.
 
 Version 0.3.0 targets Home Assistant 2026.10 and later. The configuration platform,
 integration domain, and entity unique IDs are unchanged. If an older manual install
