@@ -1,0 +1,27 @@
+[project]
+name = "ha-dualmode-ac"
+version = "0.3.0"
+requires-python = ">=3.14.2"
+dependencies = []
+
+[dependency-groups]
+test = [
+  "homeassistant==2026.10.4",
+  "pytest>=9,<10",
+  "pytest-asyncio>=1,<2",
+  "ruff>=0.14",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+testpaths = ["tests"]
+pythonpath = ["."]
+filterwarnings = ["error::RuntimeWarning"]
+
+[tool.ruff]
+target-version = "py314"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I", "ASYNC"]
