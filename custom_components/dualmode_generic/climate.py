@@ -52,7 +52,7 @@ from homeassistant.const import (
     ATTR_UNIT_OF_MEASUREMENT,
     CONF_NAME,
     CONF_UNIQUE_ID,
-    EVENT_HOMEASSISTANT_START,
+    EVENT_HOMEASSISTANT_STARTED,
     STATE_UNAVAILABLE,
     STATE_UNKNOWN,
 )
@@ -249,14 +249,31 @@ class DualModeGenericThermostat(ClimateEntity, RestoreEntity):
             await _async_startup()
         else:
             self.async_on_remove(
-                self.hass.bus.async_listen_once(EVENT_HOMEASSISTANT_START, _async_startup)
+                self.hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STARTED, _async_startup)
             )
 
     @property
     def available(self):
         """Do not present a working thermostat while its source is offline."""
         state = self.hass.states.get(self.climate_entity_id)
-        return state is not None and state.state not in (STATE_UNKNOWN, STATE_UNAVAILABLE)
+        return self._usable_source_state(state)
+
+    @staticmethod
+    def _usable_source_state(state):
+        """Reject transient source readings inconsistent with its advertised units.
+
+        Some devices initially publish Fahrenheit values alongside Celsius limits.
+        Do not adopt those setpoints or send commands until the source agrees with
+        its own limits. Ambient temperature may legitimately exceed those limits.
+        """
+        if state is None or state.state in (STATE_UNKNOWN, STATE_UNAVAILABLE):
+            return False
+        target = _number(state.attributes.get(ATTR_TEMPERATURE))
+        minimum = _number(state.attributes.get(ATTR_MIN_TEMP))
+        maximum = _number(state.attributes.get(ATTR_MAX_TEMP))
+        return target is None or (
+            (minimum is None or target >= minimum) and (maximum is None or target <= maximum)
+        )
 
     @property
     def _source_attributes(self):
@@ -537,12 +554,14 @@ class DualModeGenericThermostat(ClimateEntity, RestoreEntity):
         # overwriting our target with an intermediate mode-change setpoint.
         async with self._temp_lock:
             self._state_changed(self.hass.states.get(self.climate_entity_id))
-        await self._async_control_heating()
-        self.async_write_ha_state()
+        try:
+            await self._async_control_heating()
+        finally:
+            self.async_write_ha_state()
 
     @callback
     def _state_changed(self, new_state, *, sync_target=True, sync_mode=True):
-        if new_state is None or new_state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
+        if not self._usable_source_state(new_state):
             self._cur_temp = None
             self._cancel_cycle()
             return
@@ -623,7 +642,7 @@ class DualModeGenericThermostat(ClimateEntity, RestoreEntity):
         """Check if we need to turn heating on or off."""
         async with self._temp_lock:
             self._cancel_cycle()
-            if not self.available:
+            if self.hass.state != CoreState.running or not self.available:
                 return
             source = self.hass.states.get(self.climate_entity_id)
             mode = self._hvac_mode

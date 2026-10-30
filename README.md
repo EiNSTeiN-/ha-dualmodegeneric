@@ -18,7 +18,7 @@ This component is based on [ha-dualmodegeneric](https://github.com/zacs/ha-dualm
    * On Home Assistant OS the final location will be `/config/custom_components/dualmode_ac`
    * The installed directory must match the `dualmode_ac` integration domain. The repository retains its historic `dualmode_generic` source folder so existing HACS installations can update without cached-path errors.
 
-Version 0.3.0 targets Home Assistant 2026.10 and later. The configuration platform,
+Version 0.3.1 targets Home Assistant 2026.10 and later. The configuration platform,
 integration domain, and entity unique IDs are unchanged. If an older manual install
 used a directory named `dualmode_generic`, keep a copy of it outside
 `custom_components`, then replace it with `dualmode_ac` rather than loading both copies.
@@ -50,6 +50,9 @@ The source must support both heating and cooling to expose the synthetic `heat_c
 mode. Other source modes pass through. Optional fan, preset, and swing controls are
 advertised only when the source supports them. When the source disappears or becomes
 unavailable, the wrapper also becomes unavailable and clears its current temperature.
+It also waits when the source temporarily publishes a target outside its own advertised
+limits, such as inconsistent Celsius/Fahrenheit data during startup. Automatic control
+begins only after Home Assistant has fully started.
 
 The existing tolerance convention is preserved: the comfortable interval runs from
 `target_temp_low + hot_tolerance` to `target_temp_high - cold_tolerance`. Below that
