@@ -341,7 +341,7 @@ async def test_deferred_startup_initializes_when_home_assistant_starts(setup_wra
     await entity.async_added_to_hass()
     assert entity.current_temperature is None
     hass.set_state(CoreState.running)
-    hass.bus.async_fire("homeassistant_start")
+    hass.bus.async_fire("homeassistant_started")
     await hass.async_block_till_done()
     assert entity.current_temperature == 21
 
@@ -353,10 +353,64 @@ async def test_removal_cancels_startup_listener(setup_wrapper):
     for remove in entity._on_remove:
         remove()
     entity._on_remove = []
-    hass.bus.async_fire("homeassistant_start")
+    hass.bus.async_fire("homeassistant_started")
     await hass.async_block_till_done()
     assert entity.current_temperature is None
     assert calls == []
+
+
+async def test_startup_fahrenheit_readings_with_celsius_limits_are_not_commanded(setup_wrapper):
+    hass, entity, calls = setup_wrapper
+    hass.states.async_set(
+        SOURCE,
+        "cool",
+        {
+            **hass.states.get(SOURCE).attributes,
+            "temperature": 80,
+            "current_temperature": 69,
+        },
+    )
+    await entity.async_added_to_hass()
+    await hass.async_block_till_done()
+    assert not entity.available
+    assert entity.current_temperature is None
+    assert entity._target_temp_high == 27
+    assert calls == []
+    hass.states.async_set(
+        SOURCE,
+        "cool",
+        {
+            **hass.states.get(SOURCE).attributes,
+            "temperature": 27,
+            "current_temperature": 21,
+        },
+    )
+    await hass.async_block_till_done()
+    assert entity.available
+    assert entity.current_temperature == 21
+    assert entity.target_temperature_high == 27
+    assert calls == []
+
+
+async def test_automatic_control_waits_until_core_has_fully_started(setup_wrapper):
+    hass, entity, calls = setup_wrapper
+    hass.set_state(CoreState.starting)
+    await entity.async_added_to_hass()
+    hass.states.async_set(
+        SOURCE,
+        "cool",
+        {
+            **hass.states.get(SOURCE).attributes,
+            "current_temperature": 10,
+        },
+    )
+    hass.bus.async_fire("homeassistant_start")
+    await hass.async_block_till_done()
+    assert calls == []
+    hass.set_state(CoreState.running)
+    hass.bus.async_fire("homeassistant_started")
+    await hass.async_block_till_done()
+    assert [name for name, _ in calls] == ["set_hvac_mode", "set_temperature"]
 
 
 @pytest.mark.parametrize(
