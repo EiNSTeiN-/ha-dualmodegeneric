@@ -12,7 +12,7 @@ from homeassistant.core import CoreState, HomeAssistant
 from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 from homeassistant.util import dt as dt_util
 
-from custom_components.dualmode_ac.climate import PLATFORM_SCHEMA, DualModeGenericThermostat
+from custom_components.dualmode_generic.climate import PLATFORM_SCHEMA, DualModeGenericThermostat
 
 SOURCE = "climate.heat_pump"
 
@@ -195,13 +195,13 @@ async def test_minimum_cycle_retries_without_another_sensor_event(setup_wrapper,
     timer = Mock()
     cancel = Mock()
     timer.return_value = cancel
-    monkeypatch.setattr("custom_components.dualmode_ac.climate.async_call_later", timer)
+    monkeypatch.setattr("custom_components.dualmode_generic.climate.async_call_later", timer)
     await entity._async_control_heating()
     assert calls == []
     delay, retry = timer.call_args.args[1:]
     assert 1199 <= delay <= 1200
     now = dt_util.utcnow() + timedelta(minutes=21)
-    monkeypatch.setattr("custom_components.dualmode_ac.climate.dt_util.utcnow", lambda: now)
+    monkeypatch.setattr("custom_components.dualmode_generic.climate.dt_util.utcnow", lambda: now)
     await retry(now)
     assert [name for name, _ in calls] == ["set_hvac_mode", "set_temperature"]
     assert calls[-1][1]["temperature"] == 16
