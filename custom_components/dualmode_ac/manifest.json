@@ -2,7 +2,7 @@
     "domain": "dualmode_ac",
     "name": "Dual-Mode Thermostat for AC unit",
     "documentation": "https://github.com/EiNSTeiN-/ha-dualmodegeneric",
-    "version": "0.2",
+    "version": "0.3.0",
     "dependencies": [],
     "codeowners": ["@EiNSTeiN-"],
     "requirements": []
